@@ -7,7 +7,6 @@
 
 #include <faiss/IndexBinaryHNSW.h>
 
-#include <omp.h>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -60,10 +59,10 @@ void hnsw_add_vertices(
         printf("  max_level = %d\n", max_level);
     }
 
-    std::vector<omp_lock_t> locks(ntotal);
-    for (int i = 0; i < ntotal; i++) {
-        omp_init_lock(&locks[i]);
-    }
+    // std::vector<omp_lock_t> locks(ntotal);
+    // for (int i = 0; i < ntotal; i++) {
+    //     omp_init_lock(&locks[i]);
+    // }
 
     // add vectors from highest to lowest level
     std::vector<int> hist;
@@ -121,7 +120,7 @@ void hnsw_add_vertices(
                 std::unique_ptr<DistanceComputer> dis(
                         index_hnsw.get_distance_computer());
                 int prev_display =
-                        verbose && omp_get_thread_num() == 0 ? 0 : -1;
+                        verbose /*&& omp_get_thread_num() == 0*/ ? 0 : -1;
 
 #pragma omp for schedule(dynamic)
                 for (int i = i0; i < i1; i++) {
@@ -133,8 +132,7 @@ void hnsw_add_vertices(
                             *dis,
                             pt_level,
                             pt_id,
-                            locks,
-                            vt,
+                            /*locks,*/ vt,
                             index_hnsw.keep_max_size_level0 && (pt_level == 0));
 
                     if (prev_display >= 0 && i - i0 > prev_display + 10000) {
@@ -156,9 +154,8 @@ void hnsw_add_vertices(
         printf("Done in %.3f ms\n", getmillisecs() - t0);
     }
 
-    for (int i = 0; i < ntotal; i++) {
-        omp_destroy_lock(&locks[i]);
-    }
+    // for (int i = 0; i < ntotal; i++)
+    //     omp_destroy_lock(&locks[i]);
 }
 
 } // anonymous namespace
@@ -290,7 +287,9 @@ struct FlatHammingDis : DistanceComputer {
 
     ~FlatHammingDis() override {
 #pragma omp critical
-        { hnsw_stats.ndis += ndis; }
+        {
+            hnsw_stats.ndis += ndis;
+        }
     }
 };
 

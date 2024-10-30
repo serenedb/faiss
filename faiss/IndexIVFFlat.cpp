@@ -9,8 +9,6 @@
 
 #include <faiss/IndexIVFFlat.h>
 
-#include <omp.h>
-
 #include <cinttypes>
 #include <cstdio>
 #include <numeric>
@@ -70,8 +68,8 @@ void IndexIVFFlat::add_core(
 
 #pragma omp parallel reduction(+ : n_add)
     {
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
+        int nt = 1;   // omp_get_num_threads();
+        int rank = 0; // omp_get_thread_num();
 
         // each thread takes care of a subset of lists
         for (size_t i = 0; i < n; i++) {
@@ -308,8 +306,8 @@ void IndexIVFFlatDedup::add_with_ids(
 
 #pragma omp parallel reduction(+ : n_add, n_dup)
     {
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
+        int nt = 1;   // omp_get_num_threads();
+        int rank = 0; // omp_get_thread_num();
 
         // each thread takes care of a subset of lists
         for (size_t i = 0; i < na; i++) {

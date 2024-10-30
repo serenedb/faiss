@@ -9,7 +9,6 @@
 
 #include <faiss/IndexBinaryIVF.h>
 
-#include <omp.h>
 #include <cinttypes>
 #include <cstdio>
 
@@ -492,12 +491,13 @@ void search_knn_hamming_count(
 
     std::vector<HCounterState<HammingComputer>> cs;
     for (size_t i = 0; i < nx; ++i) {
-        cs.push_back(HCounterState<HammingComputer>(
-                all_counters.data() + i * nBuckets,
-                all_ids_per_dis.get() + i * nBuckets * k,
-                x + i * ivf->code_size,
-                ivf->d,
-                k));
+        cs.push_back(
+                HCounterState<HammingComputer>(
+                        all_counters.data() + i * nBuckets,
+                        all_ids_per_dis.get() + i * nBuckets * k,
+                        x + i * ivf->code_size,
+                        ivf->d,
+                        k));
     }
 
     size_t nlistv = 0, ndis = 0;
@@ -846,7 +846,8 @@ void IndexBinaryIVF::range_search_preassigned(
     bool store_pairs = false;
     size_t nlistv = 0, ndis = 0;
 
-    std::vector<RangeSearchPartialResult*> all_pres(omp_get_max_threads());
+    std::vector<RangeSearchPartialResult*> all_pres(
+            1 /*omp_get_max_threads()*/);
 
 #pragma omp parallel reduction(+ : nlistv, ndis)
     {
@@ -855,7 +856,7 @@ void IndexBinaryIVF::range_search_preassigned(
                 get_InvertedListScanner(store_pairs));
         FAISS_THROW_IF_NOT(scanner.get());
 
-        all_pres[omp_get_thread_num()] = &pres;
+        all_pres[0 /*omp_get_thread_num()*/] = &pres;
 
         auto scan_list_func = [&](size_t i, size_t ik, RangeQueryResult& qres) {
             idx_t key = assign[i * nprobe_2 + ik]; /* select the list  */

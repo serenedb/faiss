@@ -7,8 +7,6 @@
 
 #include <faiss/IndexIVFRaBitQ.h>
 
-#include <omp.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -116,8 +114,8 @@ void IndexIVFRaBitQ::add_core(
         std::vector<uint8_t> one_code(code_size);
         std::vector<float> centroid(d);
 
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
+        int nt = 1 /* omp_get_num_threads() */;
+        int rank = 0 /* omp_get_thread_num() */;
 
         // each thread takes care of a subset of lists
         for (size_t i = 0; i < n; i++) {
