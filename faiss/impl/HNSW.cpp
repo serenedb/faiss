@@ -516,7 +516,7 @@ void HNSW::add_links_starting_from(
     }
 
     // omp_unset_lock(&locks[pt_id]);
-    for (storage_idx_t other_id : neighbors_2) {
+    for (storage_idx_t other_id : neighbors_to_add) {
         // omp_set_lock(&locks[other_id]);
         add_link(*this, ptdis, other_id, pt_id, level, keep_max_size_level0);
         // omp_unset_lock(&locks[other_id]);

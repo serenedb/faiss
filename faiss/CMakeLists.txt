@@ -418,34 +418,34 @@ endif()
 #   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 # )
 
-if(FAISS_OPT_LEVEL STREQUAL "avx2")
-  install(TARGETS faiss_avx2
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "avx512")
-  install(TARGETS faiss_avx2 faiss_avx512
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "avx512_spr")
-  install(TARGETS faiss_avx2 faiss_avx512_spr
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "sve")
-  install(TARGETS faiss_sve
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx2")
+#   install(TARGETS faiss_avx2
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx512")
+#   install(TARGETS faiss_avx2 faiss_avx512
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx512_spr")
+#   install(TARGETS faiss_avx2 faiss_avx512_spr
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "sve")
+#   install(TARGETS faiss_sve
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
 
 foreach(header ${FAISS_HEADERS})
   get_filename_component(dir ${header} DIRECTORY )
@@ -470,6 +470,6 @@ install(FILES ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
 )
 
-install(EXPORT faiss-targets
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
-)
+# install(EXPORT faiss-targets
+#   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
+# )
