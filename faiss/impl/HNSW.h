@@ -180,7 +180,7 @@ struct HNSW {
             storage_idx_t nearest,
             float d_nearest,
             int level,
-            // mop_lock_t* locks,
+            // omp_lock_t* locks,
             VisitedTable& vt,
             bool keep_max_size_level0 = false);
 
@@ -190,7 +190,7 @@ struct HNSW {
             DistanceComputer& ptdis,
             int pt_level,
             int pt_id,
-            // std::vector<mop_lock_t>& locks,
+            // std::vector<omp_lock_t>& locks,
             VisitedTable& vt,
             bool keep_max_size_level0 = false);
 

@@ -259,8 +259,8 @@ void bucket_sort_parallel(
     memset(lims, 0, sizeof(*lims) * (vmax + 1));
 #pragma omp parallel num_threads(nt_in)
     {
-        int nt = 1; // mop_get_num_threads(); // might be different from nt_in
-        int rank = 0; // mop_get_thread_num();
+        int nt = 1;   // omp_get_num_threads(); // might be different from nt_in
+        int rank = 0; // omp_get_thread_num();
         std::vector<int64_t> local_lims(vmax + 1);
 
         // range of indices handled by this thread
@@ -485,8 +485,9 @@ void bucket_sort_inplace_parallel(
 
 #pragma omp parallel num_threads(nt_in)
     {
-        int nt = 1; // mop_get_num_threads(); // might be different from nt_in (?)
-        int rank = 0; // mop_get_thread_num();
+        int nt = 1;   // omp_get_num_threads(); // might be different from nt_in
+                      // (?)
+        int rank = 0; // omp_get_thread_num();
         std::vector<int64_t> local_lims(nbucket + 1);
 
         // range of indices handled by this thread
@@ -743,7 +744,7 @@ void hashtable_int64_to_int64_add(
             nbucket,
             lims.data(),
             perm.data(),
-            1/*mop_get_max_threads()*/);
+            1 /*omp_get_max_threads()*/);
 
     int num_errors = 0;
 #pragma omp parallel for reduction(+ : num_errors)

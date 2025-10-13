@@ -463,7 +463,7 @@ int compute_search_nslice(
         size_t n,
         size_t nprobe) {
     int nslice;
-    size_t threads = 1; // mop_get_max_threads();
+    size_t threads = 1; // omp_get_max_threads();
     if (n <= threads) {
         nslice = n;
     } else if (index->lookup_table_is_3d()) {
@@ -474,8 +474,7 @@ int compute_search_nslice(
         size_t max_lut_size = precomputed_table_max_bytes;
         // how many queries we can handle within mem budget
         size_t nq_ok = std::max(max_lut_size / lut_size_per_query, size_t(1));
-        nslice = roundup(
-                std::max(size_t(n / nq_ok), size_t(1)), threads);
+        nslice = roundup(std::max(size_t(n / nq_ok), size_t(1)), threads);
     } else {
         // LUTs unlikely to be a limiting factor
         nslice = static_cast<int>(threads);
@@ -521,7 +520,7 @@ void IndexIVFFastScan::search_dispatch_implem(
     }
 
     bool multiple_threads = false;
-            // n > 1 && impl >= 10 && impl <= 13 && mop_get_max_threads() > 1;
+    // n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
     if (impl >= 100) {
         multiple_threads = false;
         impl -= 100;
@@ -670,7 +669,7 @@ void IndexIVFFastScan::range_search_dispatch_implem(
     CoarseQuantizedWithBuffer cq(cq_in);
 
     bool multiple_threads = false;
-            // n > 1 && impl >= 10 && impl <= 13 && mop_get_max_threads() > 1;
+    // n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
     if (impl >= 100) {
         multiple_threads = false;
         impl -= 100;

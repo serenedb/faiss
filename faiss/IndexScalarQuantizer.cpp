@@ -231,8 +231,8 @@ void IndexIVFScalarQuantizer::add_core(
     {
         std::vector<float> residual(d);
         std::vector<uint8_t> one_code(code_size);
-        int nt = 1; // mop_get_num_threads();
-        int rank = 0; // mop_get_thread_num();
+        int nt = 1;   // omp_get_num_threads();
+        int rank = 0; // omp_get_thread_num();
 
         // each thread takes care of a subset of lists
         for (size_t i = 0; i < n; i++) {
