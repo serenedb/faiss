@@ -250,7 +250,8 @@ endif()
 set(FAISS_HEADERS ${FAISS_HEADERS} PARENT_SCOPE)
 
 add_library(faiss ${FAISS_SRC})
-target_compile_options(faiss PRIVATE -Wno-suggest-override -Wno-sign-compare)
+target_compile_options(faiss PUBLIC -Wno-suggest-override -Wno-sign-compare -Wno-suggest-destructor-override)
+
 
 add_library(faiss_avx2 ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "avx2" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512_spr")
@@ -410,13 +411,13 @@ else()
   target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
 endif()
 
-# install(TARGETS faiss
-#   EXPORT faiss-targets
-#   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-#   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-# )
+install(TARGETS faiss
+  EXPORT faiss-targets
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 # if(FAISS_OPT_LEVEL STREQUAL "avx2")
 #   install(TARGETS faiss_avx2
