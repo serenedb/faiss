@@ -120,7 +120,7 @@ struct IDSelectorNot : IDSelector {
     bool is_member(idx_t id) const final {
         return !sel->is_member(id);
     }
-    virtual ~IDSelectorNot() override {}
+    virtual ~IDSelectorNot() {}
 };
 
 /// selects all entries (useful for benchmarking)
@@ -128,7 +128,7 @@ struct IDSelectorAll : IDSelector {
     bool is_member(idx_t id) const final {
         return true;
     }
-    virtual ~IDSelectorAll() override {}
+    virtual ~IDSelectorAll() {}
 };
 
 /// does an AND operation on the the two given IDSelector's is_membership
@@ -141,7 +141,7 @@ struct IDSelectorAnd : IDSelector {
     bool is_member(idx_t id) const final {
         return lhs->is_member(id) && rhs->is_member(id);
     }
-    virtual ~IDSelectorAnd() override {}
+    virtual ~IDSelectorAnd() {}
 };
 
 /// does an OR operation on the the two given IDSelector's is_membership
@@ -154,7 +154,7 @@ struct IDSelectorOr : IDSelector {
     bool is_member(idx_t id) const final {
         return lhs->is_member(id) || rhs->is_member(id);
     }
-    virtual ~IDSelectorOr() override {}
+    virtual ~IDSelectorOr() {}
 };
 
 /// does an XOR operation on the the two given IDSelector's is_membership
@@ -167,7 +167,7 @@ struct IDSelectorXOr : IDSelector {
     bool is_member(idx_t id) const final {
         return lhs->is_member(id) ^ rhs->is_member(id);
     }
-    virtual ~IDSelectorXOr() override {}
+    virtual ~IDSelectorXOr() {}
 };
 
 } // namespace faiss

@@ -75,7 +75,7 @@ struct SearchParametersIVF : SearchParameters {
     /// context object to pass to InvertedLists
     void* inverted_list_context = nullptr;
 
-    virtual ~SearchParametersIVF() override {}
+    virtual ~SearchParametersIVF() {}
 };
 
 // the new convention puts the index type after SearchParameters

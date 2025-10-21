@@ -30,7 +30,7 @@
 #endif
 
 extern "C" {
-// LU decoomposition of a general matrix
+// LU decomoposition of a general matrix
 void sgetrf_(
         FINTEGER* m,
         FINTEGER* n,
@@ -65,7 +65,7 @@ int sgemm_(
         float* c,
         FINTEGER* ldc);
 
-// LU decoomposition of a general matrix
+// LU decomoposition of a general matrix
 void dgetrf_(
         FINTEGER* m,
         FINTEGER* n,

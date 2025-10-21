@@ -7,7 +7,6 @@
 
 #include <faiss/IndexFastScan.h>
 
-#include <omp.h>
 #include <cstring>
 #include <memory>
 

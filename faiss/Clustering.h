@@ -140,7 +140,7 @@ struct Clustering1D : Clustering {
 
     void train_exact(idx_t n, const float* x);
 
-    virtual ~Clustering1D() override {}
+    virtual ~Clustering1D() {}
 };
 
 struct ProgressiveDimClusteringParameters : ClusteringParameters {
