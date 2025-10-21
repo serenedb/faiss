@@ -259,6 +259,8 @@ endif()
 set(FAISS_HEADERS ${FAISS_HEADERS} PARENT_SCOPE)
 
 add_library(faiss ${FAISS_SRC})
+target_compile_options(faiss PUBLIC -Wno-suggest-override -Wno-sign-compare -Wno-suggest-destructor-override)
+
 
 add_library(faiss_avx2 ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "avx2" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512_spr")
@@ -386,15 +388,16 @@ if(FAISS_USE_LTO)
   endif()
 endif()
 
-find_package(OpenMP REQUIRED)
-target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
+
+# find_package(OpenMP REQUIRED)
+# target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
 
 if(FAISS_ENABLE_MKL)
-  find_package(MKL)
+  find_package(MKL REQUIRED)
 endif()
 if(MKL_FOUND)
   target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
@@ -424,34 +427,35 @@ install(TARGETS faiss
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-if(FAISS_OPT_LEVEL STREQUAL "avx2")
-  install(TARGETS faiss_avx2
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "avx512")
-  install(TARGETS faiss_avx2 faiss_avx512
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "avx512_spr")
-  install(TARGETS faiss_avx2 faiss_avx512_spr
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "sve")
-  install(TARGETS faiss_sve
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
+
+# if(FAISS_OPT_LEVEL STREQUAL "avx2")
+#   install(TARGETS faiss_avx2
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx512")
+#   install(TARGETS faiss_avx2 faiss_avx512
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx512_spr")
+#   install(TARGETS faiss_avx2 faiss_avx512_spr
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "sve")
+#   install(TARGETS faiss_sve
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
 
 foreach(header ${FAISS_HEADERS})
   get_filename_component(dir ${header} DIRECTORY )
@@ -476,6 +480,6 @@ install(FILES ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
 )
 
-install(EXPORT faiss-targets
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
-)
+# install(EXPORT faiss-targets
+#   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
+# )
