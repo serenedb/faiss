@@ -99,11 +99,13 @@ typedef uint64_t size_t;
 #include <faiss/Index2Layer.h>
 #include <faiss/IndexIVFPQR.h>
 #include <faiss/IndexIVFFlat.h>
+#include <faiss/IndexIVFFlatPanorama.h>
 #include <faiss/IndexIVFIndependentQuantizer.h>
 
 #include <faiss/IndexFastScan.h>
 #include <faiss/IndexAdditiveQuantizerFastScan.h>
 #include <faiss/IndexPQFastScan.h>
+#include <faiss/impl/FastScanDistancePostProcessing.h>
 #include <faiss/utils/simdlib.h>
 #include <faiss/impl/simd_result_handlers.h>
 
@@ -191,8 +193,11 @@ typedef uint64_t size_t;
 #include <faiss/IndexNeuralNetCodec.h>
 
 #include <faiss/impl/RaBitQuantizer.h>
+#include <faiss/impl/RaBitQUtils.h>
 #include <faiss/IndexRaBitQ.h>
+#include <faiss/IndexRaBitQFastScan.h>
 #include <faiss/IndexIVFRaBitQ.h>
+#include <faiss/IndexIVFRaBitQFastScan.h>
 
 %}
 
@@ -534,6 +539,7 @@ void gpu_sync_all_devices()
 %include  <faiss/IndexNNDescent.h>
 
 %include  <faiss/IndexIVFFlat.h>
+%include  <faiss/IndexIVFFlatPanorama.h>
 
 %warnfilter(509) faiss::nsg::Graph< int >::at(int,int);
 
@@ -564,6 +570,7 @@ void gpu_sync_all_devices()
 %include  <faiss/IndexIVFPQR.h>
 %include  <faiss/Index2Layer.h>
 
+%include  <faiss/impl/FastScanDistancePostProcessing.h>
 %include  <faiss/IndexFastScan.h>
 %include  <faiss/IndexAdditiveQuantizerFastScan.h>
 %include  <faiss/IndexPQFastScan.h>
@@ -610,8 +617,11 @@ struct faiss::simd16uint16 {};
 %include <faiss/IndexNeuralNetCodec.h>
 
 %include <faiss/impl/RaBitQuantizer.h>
+%include <faiss/impl/RaBitQUtils.h>
 %include <faiss/IndexRaBitQ.h>
+%include <faiss/IndexRaBitQFastScan.h>
 %include <faiss/IndexIVFRaBitQ.h>
+%include <faiss/IndexIVFRaBitQFastScan.h>
 
 %ignore faiss::BufferList::Buffer;
 %ignore faiss::RangeSearchPartialResult::QueryResult;
@@ -704,8 +714,10 @@ struct faiss::simd16uint16 {};
     DOWNCAST ( IndexShardsIVF )
     DOWNCAST2 ( IndexShards, IndexShardsTemplateT_faiss__Index_t )
     DOWNCAST2 ( IndexReplicas, IndexReplicasTemplateT_faiss__Index_t )
+    DOWNCAST ( IndexRaBitQFastScan )
     DOWNCAST ( IndexRaBitQ )
     DOWNCAST ( IndexIVFRaBitQ )
+    DOWNCAST ( IndexIVFRaBitQFastScan )
     DOWNCAST ( IndexIVFIndependentQuantizer)
     DOWNCAST ( IndexIVFPQR )
     DOWNCAST ( IndexIVFPQ )
@@ -720,6 +732,7 @@ struct faiss::simd16uint16 {};
     DOWNCAST ( IndexIVFLocalSearchQuantizerFastScan )
     DOWNCAST ( IndexIVFProductResidualQuantizerFastScan )
     DOWNCAST ( IndexIVFProductLocalSearchQuantizerFastScan )
+    DOWNCAST ( IndexIVFFlatPanorama )
     DOWNCAST ( IndexIVFFlatDedup )
     DOWNCAST ( IndexIVFFlat )
     DOWNCAST ( IndexIVF )
