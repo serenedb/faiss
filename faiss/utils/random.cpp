@@ -7,7 +7,6 @@
 
 // -*- c++ -*-
 
-#include <faiss/impl/FaissAssert.h>
 #include <faiss/utils/random.h>
 
 extern "C" {
@@ -232,9 +231,8 @@ void byte_rand(uint8_t* x, size_t n, int64_t seed) {
         }
     }
 }
-
+/*
 void rand_smooth_vectors(size_t n, size_t d, float* x, int64_t seed) {
-    FAISS_ASSERT(false); // disable due to MKL/LAPACK/BLAS dependency
     size_t d1 = 10;
     std::vector<float> x1(n * d1);
     float_randn(x1.data(), x1.size(), seed);
@@ -269,5 +267,6 @@ void rand_smooth_vectors(size_t n, size_t d, float* x, int64_t seed) {
         }
     }
 }
+*/
 
 } // namespace faiss

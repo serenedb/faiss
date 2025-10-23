@@ -237,10 +237,12 @@ struct HeapBlockResultHandler : TopkBlockResultHandler<C, use_sel> {
                 : hr(hr), k(hr.k) {}
 
         /// begin results for query # i
-        void begin(size_t i) {
+        void begin(size_t i, bool heapify = true) {
             heap_dis = hr.dis_tab + i * k;
             heap_ids = hr.ids_tab + i * k;
-            heap_heapify<C>(k, heap_dis, heap_ids);
+            if (heapify) {
+                heap_heapify<C>(k, heap_dis, heap_ids);
+            }
             threshold = heap_dis[0];
         }
 
