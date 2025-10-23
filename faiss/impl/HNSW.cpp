@@ -751,6 +751,7 @@ int search_from_candidates(
     return nres;
 }
 
+/*
 int search_from_candidates_panorama(
         const HNSW& hnsw,
         const IndexHNSW* index,
@@ -992,6 +993,7 @@ int search_from_candidates_panorama(
 
     return nres;
 }
+*/
 
 std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
         const HNSW& hnsw,
@@ -1231,22 +1233,22 @@ HNSWStats HNSW::search(
 
         candidates.push(nearest, d_nearest);
 
-        if (!is_panorama) {
+        // if (!is_panorama) {
             search_from_candidates(
                     *this, qdis, res, candidates, vt, stats, 0, 0, params);
-        } else {
-            search_from_candidates_panorama(
-                    *this,
-                    index,
-                    qdis,
-                    res,
-                    candidates,
-                    vt,
-                    stats,
-                    0,
-                    0,
-                    params);
-        }
+        // } else {
+        //     search_from_candidates_panorama(
+        //             *this,
+        //             index,
+        //             qdis,
+        //             res,
+        //             candidates,
+        //             vt,
+        //             stats,
+        //             0,
+        //             0,
+        //             params);
+        // }
     } else {
         std::priority_queue<Node> top_candidates =
                 search_from_candidate_unbounded(
