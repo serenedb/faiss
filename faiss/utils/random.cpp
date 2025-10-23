@@ -231,7 +231,7 @@ void byte_rand(uint8_t* x, size_t n, int64_t seed) {
         }
     }
 }
-
+/*
 void rand_smooth_vectors(size_t n, size_t d, float* x, int64_t seed) {
     size_t d1 = 10;
     std::vector<float> x1(n * d1);
@@ -267,5 +267,6 @@ void rand_smooth_vectors(size_t n, size_t d, float* x, int64_t seed) {
         }
     }
 }
+*/
 
 } // namespace faiss

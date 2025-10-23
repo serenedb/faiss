@@ -4,104 +4,104 @@
 # LICENSE file in the root directory of this source tree.
 
 set(FAISS_SRC
-  AutoTune.cpp
-  Clustering.cpp
-  IVFlib.cpp
-  Index.cpp
-  Index2Layer.cpp
-  IndexAdditiveQuantizer.cpp
-  IndexBinary.cpp
-  IndexBinaryFlat.cpp
-  IndexBinaryFromFloat.cpp
-  IndexBinaryHNSW.cpp
-  IndexBinaryHash.cpp
-  IndexBinaryIVF.cpp
-  IndexFlat.cpp
-  IndexFlatCodes.cpp
-  IndexHNSW.cpp
-  IndexIDMap.cpp
-  IndexIVF.cpp
-  IndexIVFAdditiveQuantizer.cpp
-  IndexIVFFlat.cpp
-  IndexIVFFlatPanorama.cpp
-  IndexIVFPQ.cpp
-  IndexIVFFastScan.cpp
-  IndexIVFAdditiveQuantizerFastScan.cpp
-  IndexIVFPQFastScan.cpp
-  IndexIVFPQR.cpp
-  IndexIVFRaBitQ.cpp
-  IndexIVFRaBitQFastScan.cpp
-  IndexIVFSpectralHash.cpp
-  IndexLSH.cpp
-  IndexNNDescent.cpp
-  IndexLattice.cpp
-  IndexNSG.cpp
-  IndexPQ.cpp
-  IndexFastScan.cpp
-  IndexAdditiveQuantizerFastScan.cpp
-  IndexIVFIndependentQuantizer.cpp
-  IndexPQFastScan.cpp
-  IndexPreTransform.cpp
-  IndexRaBitQ.cpp
-  IndexRaBitQFastScan.cpp
-  IndexRefine.cpp
-  IndexReplicas.cpp
-  IndexRowwiseMinMax.cpp
-  IndexScalarQuantizer.cpp
-  IndexShards.cpp
-  IndexShardsIVF.cpp
-  IndexNeuralNetCodec.cpp
-  MatrixStats.cpp
-  MetaIndexes.cpp
-  VectorTransform.cpp
-  clone_index.cpp
-  index_factory.cpp
+  # AutoTune.cpp
+  # Clustering.cpp
+  # IVFlib.cpp
+  # Index.cpp
+  # Index2Layer.cpp
+  # IndexAdditiveQuantizer.cpp
+  # IndexBinary.cpp
+  # IndexBinaryFlat.cpp
+  # IndexBinaryFromFloat.cpp
+  # IndexBinaryHNSW.cpp
+  # IndexBinaryHash.cpp
+  # IndexBinaryIVF.cpp
+  # IndexFlat.cpp
+  # IndexFlatCodes.cpp
+  # IndexHNSW.cpp
+  # IndexIDMap.cpp
+  # IndexIVF.cpp
+  # IndexIVFAdditiveQuantizer.cpp
+  # IndexIVFFlat.cpp
+  # IndexIVFFlatPanorama.cpp
+  # IndexIVFPQ.cpp
+  # IndexIVFFastScan.cpp
+  # IndexIVFAdditiveQuantizerFastScan.cpp
+  # IndexIVFPQFastScan.cpp
+  # IndexIVFPQR.cpp
+  # IndexIVFRaBitQ.cpp
+  # IndexIVFRaBitQFastScan.cpp
+  # IndexIVFSpectralHash.cpp
+  # IndexLSH.cpp
+  # IndexNNDescent.cpp
+  # IndexLattice.cpp
+  # IndexNSG.cpp
+  # IndexPQ.cpp
+  # IndexFastScan.cpp
+  # IndexAdditiveQuantizerFastScan.cpp
+  # IndexIVFIndependentQuantizer.cpp
+  # IndexPQFastScan.cpp
+  # IndexPreTransform.cpp
+  # IndexRaBitQ.cpp
+  # IndexRaBitQFastScan.cpp
+  # IndexRefine.cpp
+  # IndexReplicas.cpp
+  # IndexRowwiseMinMax.cpp
+  # IndexScalarQuantizer.cpp
+  # IndexShards.cpp
+  # IndexShardsIVF.cpp
+  # IndexNeuralNetCodec.cpp
+  # MatrixStats.cpp
+  # MetaIndexes.cpp
+  # VectorTransform.cpp
+  # clone_index.cpp
+  # index_factory.cpp
   impl/AuxIndexStructures.cpp
-  impl/CodePacker.cpp
+  # impl/CodePacker.cpp
   impl/IDSelector.cpp
   impl/FaissException.cpp
   impl/HNSW.cpp
-  impl/NSG.cpp
-  impl/PolysemousTraining.cpp
-  impl/ProductQuantizer.cpp
-  impl/AdditiveQuantizer.cpp
-  impl/RaBitQuantizer.cpp
-  impl/RaBitQUtils.cpp
-  impl/ResidualQuantizer.cpp
-  impl/LocalSearchQuantizer.cpp
-  impl/ProductAdditiveQuantizer.cpp
-  impl/ScalarQuantizer.cpp
-  impl/index_read.cpp
-  impl/index_write.cpp
-  impl/io.cpp
-  impl/kmeans1d.cpp
-  impl/lattice_Zn.cpp
-  impl/mapped_io.cpp
-  impl/pq4_fast_scan.cpp
-  impl/pq4_fast_scan_search_1.cpp
-  impl/pq4_fast_scan_search_qbs.cpp
-  impl/residual_quantizer_encode_steps.cpp
-  impl/zerocopy_io.cpp
-  impl/NNDescent.cpp
-  invlists/BlockInvertedLists.cpp
-  invlists/DirectMap.cpp
-  invlists/InvertedLists.cpp
-  invlists/InvertedListsIOHook.cpp
-  utils/Heap.cpp
-  utils/NeuralNet.cpp
-  utils/WorkerThread.cpp
-  utils/distances.cpp
+  # impl/NSG.cpp
+  # impl/PolysemousTraining.cpp
+  # impl/ProductQuantizer.cpp
+  # impl/AdditiveQuantizer.cpp
+  # impl/RaBitQuantizer.cpp
+  # impl/RaBitQUtils.cpp
+  # impl/ResidualQuantizer.cpp
+  # impl/LocalSearchQuantizer.cpp
+  # impl/ProductAdditiveQuantizer.cpp
+  # impl/ScalarQuantizer.cpp
+  # impl/index_read.cpp
+  # impl/index_write.cpp
+  # impl/io.cpp
+  # impl/kmeans1d.cpp
+  # impl/lattice_Zn.cpp
+  # impl/mapped_io.cpp
+  # impl/pq4_fast_scan.cpp
+  # impl/pq4_fast_scan_search_1.cpp
+  # impl/pq4_fast_scan_search_qbs.cpp
+  # impl/residual_quantizer_encode_steps.cpp
+  # impl/zerocopy_io.cpp
+  # impl/NNDescent.cpp
+  # invlists/BlockInvertedLists.cpp
+  # invlists/DirectMap.cpp
+  # invlists/InvertedLists.cpp
+  # invlists/InvertedListsIOHook.cpp
+  # utils/Heap.cpp
+  # utils/NeuralNet.cpp
+  # utils/WorkerThread.cpp
+  # utils/distances.cpp
   utils/distances_simd.cpp
-  utils/extra_distances.cpp
-  utils/hamming.cpp
-  utils/partitioning.cpp
-  utils/quantize_lut.cpp
+  # utils/extra_distances.cpp
+  # utils/hamming.cpp
+  # utils/partitioning.cpp
+  # utils/quantize_lut.cpp
   utils/random.cpp
-  utils/sorting.cpp
-  utils/utils.cpp
-  utils/distances_fused/avx512.cpp
-  utils/distances_fused/distances_fused.cpp
-  utils/distances_fused/simdlib_based.cpp
+  # utils/sorting.cpp
+  # utils/utils.cpp
+  # utils/distances_fused/avx512.cpp
+  # utils/distances_fused/distances_fused.cpp
+  # utils/distances_fused/simdlib_based.cpp
 )
 
 set(FAISS_HEADERS
@@ -396,29 +396,29 @@ endif()
 # target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
 # target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
 
-if(FAISS_ENABLE_MKL)
-  find_package(MKL REQUIRED)
-endif()
-if(MKL_FOUND)
-  target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_avx512 PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_avx512_spr PRIVATE ${MKL_LIBRARIES})
-else()
-  find_package(BLAS REQUIRED)
-  target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_avx2 PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_avx512 PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_avx512_spr PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_sve PRIVATE ${BLAS_LIBRARIES})
+# if(FAISS_ENABLE_MKL)
+#   find_package(MKL REQUIRED)
+# endif()
+# if(MKL_FOUND)
+#   target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
+#   target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
+#   target_link_libraries(faiss_avx512 PRIVATE ${MKL_LIBRARIES})
+#   target_link_libraries(faiss_avx512_spr PRIVATE ${MKL_LIBRARIES})
+# else()
+#   find_package(BLAS REQUIRED)
+#   target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_avx2 PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_avx512 PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_avx512_spr PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_sve PRIVATE ${BLAS_LIBRARIES})
 
-  find_package(LAPACK REQUIRED)
-  target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_avx2 PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_avx512 PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_avx512_spr PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
-endif()
+#   find_package(LAPACK REQUIRED)
+#   target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_avx2 PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_avx512 PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_avx512_spr PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
+# endif()
 
 install(TARGETS faiss
   EXPORT faiss-targets
