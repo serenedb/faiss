@@ -79,6 +79,7 @@ namespace faiss {
 /*************************************************************
  * Write
  **************************************************************/
+/*
 static void write_index_header(const Index* idx, IOWriter* f) {
     WRITE1(idx->d);
     WRITE1(idx->ntotal);
@@ -300,8 +301,9 @@ void write_ProductQuantizer(const ProductQuantizer* pq, const char* fname) {
     FileIOWriter writer(fname);
     write_ProductQuantizer(pq, &writer);
 }
+*/
 
-static void write_HNSW(const HNSW* hnsw, IOWriter* f) {
+void write_HNSW(const HNSW* hnsw, IOWriter* f) {
     WRITEVECTOR(hnsw->assign_probas);
     WRITEVECTOR(hnsw->cum_nneighbor_per_level);
     WRITEVECTOR(hnsw->levels);
@@ -319,6 +321,7 @@ static void write_HNSW(const HNSW* hnsw, IOWriter* f) {
     WRITE1(tmp_upper_beam);
 }
 
+/*
 static void write_NSG(const NSG* nsg, IOWriter* f) {
     WRITE1(nsg->ntotal);
     WRITE1(nsg->R);
@@ -934,11 +937,13 @@ void write_VectorTransform(const VectorTransform* vt, const char* fname) {
     FileIOWriter writer(fname);
     write_VectorTransform(vt, &writer);
 }
+*/
 
 /*************************************************************
  * Write binary indexes
  **************************************************************/
 
+/*
 static void write_index_binary_header(const IndexBinary* idx, IOWriter* f) {
     WRITE1(idx->d);
     WRITE1(idx->code_size);
@@ -1104,5 +1109,6 @@ void write_index_binary(const IndexBinary* idx, const char* fname) {
     FileIOWriter writer(fname);
     write_index_binary(idx, &writer);
 }
+*/
 
 } // namespace faiss

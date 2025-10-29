@@ -156,6 +156,7 @@ bool read_vector_base(
     return false;
 }
 
+/*
 // a replacement for READANDCHECK for reading data into std::vector
 template <typename VectorT>
 void read_vector_with_known_size(VectorT& target, IOReader* f, size_t size) {
@@ -167,6 +168,7 @@ void read_vector_with_known_size(VectorT& target, IOReader* f, size_t size) {
     // the default case
     READANDCHECK(target.data(), size);
 }
+*/
 
 // a replacement for READVECTOR
 template <typename VectorT>
@@ -180,6 +182,7 @@ void read_vector(VectorT& target, IOReader* f) {
     READVECTOR(target);
 }
 
+/*
 // a replacement for READXBVECTOR
 template <typename VectorT>
 void read_xb_vector(VectorT& target, IOReader* f) {
@@ -191,11 +194,12 @@ void read_xb_vector(VectorT& target, IOReader* f) {
     // the default case
     READXBVECTOR(target);
 }
+*/
 
 /*************************************************************
  * Read
  **************************************************************/
-
+/*
 void read_index_header(Index* idx, IOReader* f) {
     READ1(idx->d);
     READ1(idx->ntotal);
@@ -497,8 +501,9 @@ void read_ScalarQuantizer(ScalarQuantizer* ivsc, IOReader* f) {
     READVECTOR(ivsc->trained);
     ivsc->set_derived_sizes();
 }
+*/
 
-static void read_HNSW(HNSW* hnsw, IOReader* f) {
+void read_HNSW(HNSW* hnsw, IOReader* f) {
     READVECTOR(hnsw->assign_probas);
     READVECTOR(hnsw->cum_nneighbor_per_level);
     READVECTOR(hnsw->levels);
@@ -515,6 +520,7 @@ static void read_HNSW(HNSW* hnsw, IOReader* f) {
     READ1_DUMMY(int)
 }
 
+/*
 static void read_NSG(NSG* nsg, IOReader* f) {
     READ1(nsg->ntotal);
     READ1(nsg->R);
@@ -1329,11 +1335,12 @@ VectorTransform* read_VectorTransform(const char* fname) {
     VectorTransform* vt = read_VectorTransform(&reader);
     return vt;
 }
+*/
 
 /*************************************************************
  * Read binary indexes
  **************************************************************/
-
+/*
 static void read_InvertedLists(IndexBinaryIVF* ivf, IOReader* f, int io_flags) {
     InvertedLists* ils = read_InvertedLists(f, io_flags);
     FAISS_THROW_IF_NOT(
@@ -1525,5 +1532,5 @@ IndexBinary* read_index_binary(const char* fname, int io_flags) {
         return idx;
     }
 }
-
+*/
 } // namespace faiss
