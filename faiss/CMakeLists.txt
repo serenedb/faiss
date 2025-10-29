@@ -71,22 +71,22 @@ set(FAISS_SRC
   # impl/LocalSearchQuantizer.cpp
   # impl/ProductAdditiveQuantizer.cpp
   # impl/ScalarQuantizer.cpp
-  # impl/index_read.cpp
-  # impl/index_write.cpp
-  # impl/io.cpp
+  impl/index_read.cpp
+  impl/index_write.cpp
+  impl/io.cpp
   # impl/kmeans1d.cpp
   # impl/lattice_Zn.cpp
-  # impl/mapped_io.cpp
+  impl/mapped_io.cpp
   # impl/pq4_fast_scan.cpp
   # impl/pq4_fast_scan_search_1.cpp
   # impl/pq4_fast_scan_search_qbs.cpp
   # impl/residual_quantizer_encode_steps.cpp
-  # impl/zerocopy_io.cpp
+  impl/zerocopy_io.cpp
   # impl/NNDescent.cpp
   # invlists/BlockInvertedLists.cpp
   # invlists/DirectMap.cpp
-  # invlists/InvertedLists.cpp
-  # invlists/InvertedListsIOHook.cpp
+  invlists/InvertedLists.cpp
+  invlists/InvertedListsIOHook.cpp
   # utils/Heap.cpp
   # utils/NeuralNet.cpp
   # utils/WorkerThread.cpp
