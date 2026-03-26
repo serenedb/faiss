@@ -95,7 +95,7 @@ set(FAISS_SRC
   # utils/Heap.cpp
   # utils/NeuralNet.cpp
   # utils/WorkerThread.cpp
-  # utils/distances.cpp
+  utils/distances.cpp
   utils/distances_simd.cpp
   # utils/extra_distances.cpp
   # utils/hamming.cpp
