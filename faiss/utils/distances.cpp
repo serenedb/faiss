@@ -452,8 +452,7 @@ void exhaustive_L2sqr_blas_cmax_avx2(
                 size_t count = j1 - j0;
 
                 // process 16 elements per loop
-                for (; idx_j < (count / 16) * 16; idx_j += 16, ip_line += 16)
-                {
+                for (; idx_j < (count / 16) * 16; idx_j += 16, ip_line += 16) {
                     _mm_prefetch((const char*)(ip_line + 32), _MM_HINT_NTA);
                     _mm_prefetch((const char*)(ip_line + 48), _MM_HINT_NTA);
 
@@ -467,10 +466,8 @@ void exhaustive_L2sqr_blas_cmax_avx2(
                     const __m256 ip_0 = _mm256_loadu_ps(ip_line + 0);
                     const __m256 ip_1 = _mm256_loadu_ps(ip_line + 8);
 
-                    // compute dis = y_norm[j] - 2 * dot(x_norm[i],
-                    y_norm[j]).
-                    // x_norm[i] was dropped off because it is a constant for
-                    a
+                    // compute dis = y_norm[j] - 2 * dot(x_norm[i], y_norm[j]).
+                    // x_norm[i] was dropped off because it is a constant for a
                     // given i. We'll deal with it later.
                     __m256 distances_0 =
                             _mm256_fmadd_ps(ip_0, mul_minus2, y_norm_0);
@@ -482,8 +479,7 @@ void exhaustive_L2sqr_blas_cmax_avx2(
                     const __m256 comparison_0 = _mm256_cmp_ps(
                             min_distances, distances_0, _CMP_LE_OS);
 
-                    // update min distances and indices with closest vectors
-                    if
+                    // update min distances and indices with closest vectors if
                     // needed.
                     min_distances = _mm256_blendv_ps(
                             distances_0, min_distances, comparison_0);
@@ -499,8 +495,7 @@ void exhaustive_L2sqr_blas_cmax_avx2(
                     const __m256 comparison_1 = _mm256_cmp_ps(
                             min_distances, distances_1, _CMP_LE_OS);
 
-                    // update min distances and indices with closest vectors
-                    if
+                    // update min distances and indices with closest vectors if
                     // needed.
                     min_distances = _mm256_blendv_ps(
                             distances_1, min_distances, comparison_1);
@@ -650,8 +645,7 @@ void exhaustive_L2sqr_blas_cmax_sve(
                 //   into account in order to get rid of extra
                 //   vaddq_f32(x_norms[i], ...) instructions
                 //   is distance computations.
-                auto min_distances = svdup_n_f32(res.dis_tab[i] -
-                x_norms[i]);
+                auto min_distances = svdup_n_f32(res.dis_tab[i] - x_norms[i]);
 
                 // these indices are local and are relative to j0.
                 // so, value 0 means j0.
@@ -671,8 +665,7 @@ void exhaustive_L2sqr_blas_cmax_sve(
 
                     // mask
                     const auto mask_0 = svwhilelt_b32_u64(idx_j, count);
-                    const auto mask_1 = svwhilelt_b32_u64(idx_j + lanes,
-                    count);
+                    const auto mask_1 = svwhilelt_b32_u64(idx_j + lanes, count);
 
                     // load values for norms
                     const auto y_norm_0 =
@@ -684,10 +677,8 @@ void exhaustive_L2sqr_blas_cmax_sve(
                     const auto ip_0 = svld1_f32(mask_0, ip_line + 0);
                     const auto ip_1 = svld1_f32(mask_1, ip_line + lanes);
 
-                    // compute dis = y_norm[j] - 2 * dot(x_norm[i],
-                    y_norm[j]).
-                    // x_norm[i] was dropped off because it is a constant for
-                    a
+                    // compute dis = y_norm[j] - 2 * dot(x_norm[i], y_norm[j]).
+                    // x_norm[i] was dropped off because it is a constant for a
                     // given i. We'll deal with it later.
                     const auto distances_0 =
                             svmla_n_f32_z(mask_0, y_norm_0, ip_0, -2.f);
@@ -699,15 +690,12 @@ void exhaustive_L2sqr_blas_cmax_sve(
                     auto comparison =
                             svcmpgt_f32(mask_0, min_distances, distances_0);
 
-                    // update min distances and indices with closest vectors
-                    if
+                    // update min distances and indices with closest vectors if
                     // needed.
                     min_distances =
-                            svsel_f32(comparison, distances_0,
-                            min_distances);
+                            svsel_f32(comparison, distances_0, min_distances);
                     min_indices =
-                            svsel_u32(comparison, current_indices,
-                            min_indices);
+                            svsel_u32(comparison, current_indices, min_indices);
                     current_indices = svadd_n_u32_x(
                             mask_0,
                             current_indices,
@@ -718,15 +706,12 @@ void exhaustive_L2sqr_blas_cmax_sve(
                     comparison =
                             svcmpgt_f32(mask_1, min_distances, distances_1);
 
-                    // update min distances and indices with closest vectors
-                    if
+                    // update min distances and indices with closest vectors if
                     // needed.
                     min_distances =
-                            svsel_f32(comparison, distances_1,
-                            min_distances);
+                            svsel_f32(comparison, distances_1, min_distances);
                     min_indices =
-                            svsel_u32(comparison, current_indices,
-                            min_indices);
+                            svsel_u32(comparison, current_indices, min_indices);
                     current_indices = svadd_n_u32_x(
                             mask_1,
                             current_indices,
@@ -747,8 +732,8 @@ void exhaustive_L2sqr_blas_cmax_sve(
                 if (svcntp_b32(svptrue_b32(), mask) == 0)
                     res.add_result(i, res.dis_tab[i], res.ids_tab[i]);
                 else {
-                    const auto min_distance = svminv_f32(mask,
-                    min_distances); const auto min_index = svminv_u32(
+                    const auto min_distance = svminv_f32(mask, min_distances);
+                    const auto min_index = svminv_u32(
                             svcmpeq_n_f32(mask, min_distances, min_distance),
                             min_indices);
                     res.add_result(i, min_distance, min_index);
@@ -927,8 +912,8 @@ void knn_L2sqr(
         sel = nullptr;
     }
     if (auto sela = dynamic_cast<const IDSelectorArray*>(sel)) {
-        knn_L2sqr_by_idx(x, y, sela->ids, d, nx, ny, sela->n, k, vals, ids,
-        0); return;
+        knn_L2sqr_by_idx(x, y, sela->ids, d, nx, ny, sela->n, k, vals, ids, 0);
+        return;
     }
 
     Run_search_L2sqr r;
@@ -1204,8 +1189,8 @@ void pairwise_L2sqr(
     }
 
     {
-        FINTEGER nbi = nb, nqi = nq, di = d, ldqi = ldq, ldbi = ldb, lddi =
-        ldd; float one = 1.0, minus_2 = -2.0;
+        FINTEGER nbi = nb, nqi = nq, di = d, ldqi = ldq, ldbi = ldb, lddi = ldd;
+        float one = 1.0, minus_2 = -2.0;
 
         sgemm_("Transposed",
                "Not transposed",
