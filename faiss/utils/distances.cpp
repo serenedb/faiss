@@ -80,6 +80,8 @@ void fvec_norms_L2sqr(
     }
 }
 
+#if 0
+
 // The following is a workaround to a problem
 // in OpenMP in fbcode. The crash occurs
 // inside OMP when IndexIVFSpectralHash::set_query()
@@ -1220,5 +1222,7 @@ void inner_product_to_L2sqr(
         }
     }
 }
+
+#endif
 
 } // namespace faiss
