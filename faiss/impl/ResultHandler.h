@@ -247,7 +247,7 @@ struct HeapBlockResultHandler : TopkBlockResultHandler<C, use_sel> {
         }
 
         /// add one result for query i
-        bool add_result(T dis, TI idx) final {
+        bool add_result(T dis, TI idx) {
             if (C::cmp(threshold, dis)) {
                 heap_replace_top<C>(k, heap_dis, heap_ids, dis, idx);
                 threshold = heap_dis[0];
@@ -530,7 +530,7 @@ struct RangeSearchBlockResultHandler : BlockResultHandler<C, use_sel> {
         }
 
         /// add one result for query i
-        bool add_result(T dis, TI idx) final {
+        bool add_result(T dis, TI idx) {
             if (C::cmp(threshold, dis)) {
                 qr->add(dis, idx);
             }
