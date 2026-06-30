@@ -17,7 +17,7 @@
 #include <algorithm>
 
 #include <faiss/IndexFlat.h>
-#include <faiss/VectorTransform.h>
+// #include <faiss/VectorTransform.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/utils/distances.h>
 
@@ -101,6 +101,7 @@ static void init_hypercube(
     }
 }
 
+#if 0
 static void init_hypercube_pca(
         int d,
         int nbits,
@@ -121,6 +122,7 @@ static void init_hypercube_pca(
         }
     }
 }
+#endif
 
 void ProductQuantizer::train(size_t n, const float* x) {
     if (train_type != Train_shared) {
@@ -159,6 +161,7 @@ void ProductQuantizer::train(size_t n, const float* x) {
                             xslice.get(),
                             clus.centroids.data());
                     break;
+                /*
                 case Train_hypercube_pca:
                     init_hypercube_pca(
                             dsub,
@@ -167,6 +170,7 @@ void ProductQuantizer::train(size_t n, const float* x) {
                             xslice.get(),
                             clus.centroids.data());
                     break;
+                */
                 case Train_hot_start:
                     memcpy(clus.centroids.data(),
                            get_centroids(m, 0),
@@ -314,7 +318,7 @@ void ProductQuantizer::decode(const uint8_t* code, float* x) const {
 }
 
 void ProductQuantizer::decode(const uint8_t* code, float* x, size_t n) const {
-#pragma omp parallel for if (n > 100)
+    // #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < n; i++) {
         this->decode(code + code_size * i, x + d * i);
     }
@@ -409,7 +413,7 @@ void ProductQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
 
     if (dsub < 16) { // simple direct computation
 
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int64_t i = 0; i < n; i++)
             compute_code(x + i * d, codes + i * code_size);
 
@@ -417,7 +421,7 @@ void ProductQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
         std::unique_ptr<float[]> dis_tables(new float[n * ksub * M]);
         compute_distance_tables(n, x, dis_tables.get());
 
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int64_t i = 0; i < n; i++) {
             uint8_t* code = codes + i * code_size;
             const float* tab = dis_tables.get() + i * ksub * M;
@@ -480,7 +484,7 @@ void ProductQuantizer::compute_distance_tables(
 #endif
             if (dsub < 16) {
 
-#pragma omp parallel for if (nx > 1)
+        // #pragma omp parallel for if (nx > 1)
         for (int64_t i = 0; i < nx; i++) {
             compute_distance_table(x + i * d, dis_tables + i * ksub * M);
         }
@@ -514,13 +518,13 @@ void ProductQuantizer::compute_inner_prod_tables(
 #endif
             if (dsub < 16) {
 
-#pragma omp parallel for if (nx > 1)
+        // #pragma omp parallel for if (nx > 1)
         for (int64_t i = 0; i < nx; i++) {
             compute_inner_prod_table(x + i * d, dis_tables + i * ksub * M);
         }
 
     } else { // use BLAS
-
+#if 0
         // compute distance tables
         for (int m = 0; m < M; m++) {
             FINTEGER ldc = ksub * M, nxi = nx, ksubi = ksub, dsubi = dsub,
@@ -541,6 +545,12 @@ void ProductQuantizer::compute_inner_prod_tables(
                    dis_tables + ksub * m,
                    &ldc);
         }
+#else
+        // #pragma omp parallel for if (nx > 1)
+        for (int64_t i = 0; i < nx; i++) {
+            compute_inner_prod_table(x + i * d, dis_tables + i * ksub * M);
+        }
+#endif
     }
 }
 
@@ -688,7 +698,7 @@ void pq_knn_search_with_tables(
     size_t k = res->k, nx = res->nh;
     size_t ksub = pq.ksub, M = pq.M;
 
-#pragma omp parallel for if (nx > 1)
+    // #pragma omp parallel for if (nx > 1)
     for (int64_t i = 0; i < nx; i++) {
         /* query preparation for asymmetric search: compute look-up tables */
         const float* dis_table = dis_tables + i * ksub * M;
@@ -785,7 +795,7 @@ void ProductQuantizer::compute_sdc_table() {
     sdc_table.resize(M * ksub * ksub);
 
     if (dsub < 4) {
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int mk = 0; mk < M * ksub; mk++) {
             // allow omp to schedule in a more fine-grained way
             // `collapse` is not supported in OpenMP 2.x
@@ -799,7 +809,7 @@ void ProductQuantizer::compute_sdc_table() {
     } else {
         // NOTE: it would disable the omp loop in pairwise_L2sqr
         // but still accelerate especially when M >= 4
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int m = 0; m < M; m++) {
             const float* cents = centroids.data() + m * ksub * dsub;
             float* dis_tab = sdc_table.data() + m * ksub * ksub;
@@ -820,7 +830,7 @@ void ProductQuantizer::search_sdc(
     FAISS_THROW_IF_NOT(nbits == 8);
     size_t k = res->k;
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (int64_t i = 0; i < nq; i++) {
         /* Compute distances and keep smallest values */
         idx_t* heap_ids = res->ids + i * k;

@@ -55,7 +55,7 @@ namespace faiss {
 #endif
 
 #if defined(__aarch64__)
-#if defined(__GNUC__) && __GNUC__ < 8
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 8
 #warning \
         "Cannot enable NEON optimizations in scalar quantizer if the compiler is GCC<8"
 #else
@@ -2119,6 +2119,7 @@ SQDistanceComputer* ScalarQuantizer::get_distance_computer(
     }
 }
 
+#if 0
 /*******************************************************************
  * IndexScalarQuantizer/IndexIVFScalarQuantizer scanner object
  *
@@ -2487,5 +2488,6 @@ InvertedListScanner* ScalarQuantizer::select_InvertedListScanner(
                 mt, this, quantizer, store_pairs, sel, by_residual);
     }
 }
+#endif
 
 } // namespace faiss

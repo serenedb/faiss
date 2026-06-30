@@ -247,6 +247,11 @@ void reflection_ref(const float* u, float* x, size_t n, size_t d, size_t nu) {
  ***************************************************************************/
 
 void matrix_qr(int m, int n, float* a) {
+    (void)m;
+    (void)n;
+    (void)a;
+    FAISS_THROW_MSG("matrix_qr unavailable: LAPACK not linked");
+#if 0
     FAISS_THROW_IF_NOT(m >= n);
     FINTEGER mi = m, ni = n, ki = mi < ni ? mi : ni;
     std::vector<float> tau(ki);
@@ -260,6 +265,7 @@ void matrix_qr(int m, int n, float* a) {
     sgeqrf_(&mi, &ni, a, &mi, tau.data(), work.data(), &lwork, &info);
 
     sorgqr_(&mi, &ni, &ki, a, &mi, tau.data(), work.data(), &lwork, &info);
+#endif
 }
 
 /***************************************************************************
@@ -292,12 +298,12 @@ size_t merge_result_table_with(
         int64_t translation) {
     size_t n1 = 0;
 
-#pragma omp parallel reduction(+ : n1)
+    // #pragma omp parallel reduction(+ : n1)
     {
         std::vector<int64_t> tmpI(k);
         std::vector<float> tmpD(k);
 
-#pragma omp for
+        // #pragma omp for
         for (int64_t i = 0; i < n; i++) {
             int64_t* lI0 = I0 + i * k;
             float* lD0 = D0 + i * k;
@@ -463,7 +469,7 @@ void bvecs_checksum(size_t n, size_t d, const uint8_t* a, uint64_t* cs) {
     // so below codes only accept n <= std::numeric_limits<ssize_t>::max()
     using ssize_t = std::make_signed<std::size_t>::type;
     const ssize_t size = n;
-#pragma omp parallel for if (size > 1000)
+    // #pragma omp parallel for if (size > 1000)
     for (ssize_t i_ = 0; i_ < size; i_++) {
         const auto i = static_cast<std::size_t>(i_);
         cs[i] = bvec_checksum(d, a + i * d);

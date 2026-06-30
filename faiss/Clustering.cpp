@@ -149,7 +149,7 @@ void compute_centroids(
 
     size_t line_size = codec ? codec->sa_code_size() : d * sizeof(float);
 
-#pragma omp parallel
+    // #pragma omp parallel
     {
         int nt = 1;   // omp_get_num_threads();
         int rank = 0; // omp_get_thread_num();
@@ -189,7 +189,7 @@ void compute_centroids(
         }
     }
 
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (idx_t ci = 0; ci < k; ci++) {
         if (hassign[ci] == 0) {
             continue;
@@ -687,6 +687,9 @@ void ProgressiveDimClustering::train(
         idx_t n,
         const float* x,
         ProgressiveDimIndexFactory& factory) {
+    FAISS_THROW_MSG(
+            "ProgressiveDimClustering disabled (VectorTransform not built)");
+#if 0
     int d_prev = 0;
 
     PCAMatrix pca(d, d);
@@ -743,6 +746,7 @@ void ProgressiveDimClustering::train(
         pca.reverse_transform(k, centroids.data(), cent_transformed.data());
         cent_transformed.swap(centroids);
     }
+#endif
 }
 
 } // namespace faiss
