@@ -66,10 +66,10 @@ set(FAISS_SRC
   # impl/PolysemousTraining.cpp
   impl/ProductQuantizer.cpp
   # impl/AdditiveQuantizer.cpp
-  # impl/RaBitQuantizer.cpp
-  # impl/RaBitQuantizerMultiBit.cpp
-  # impl/RaBitQStats.cpp
-  # impl/RaBitQUtils.cpp
+  impl/RaBitQuantizer.cpp
+  impl/RaBitQuantizerMultiBit.cpp
+  impl/RaBitQStats.cpp
+  impl/RaBitQUtils.cpp
   # impl/ResidualQuantizer.cpp
   # impl/LocalSearchQuantizer.cpp
   # impl/ProductAdditiveQuantizer.cpp
