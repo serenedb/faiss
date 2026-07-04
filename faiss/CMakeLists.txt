@@ -80,9 +80,9 @@ set(FAISS_SRC
   impl/kmeans1d.cpp
   # impl/lattice_Zn.cpp
   # impl/mapped_io.cpp
-  # impl/pq4_fast_scan.cpp
-  # impl/pq4_fast_scan_search_1.cpp
-  # impl/pq4_fast_scan_search_qbs.cpp
+  impl/pq4_fast_scan.cpp
+  impl/pq4_fast_scan_search_1.cpp
+  impl/pq4_fast_scan_search_qbs.cpp
   # impl/residual_quantizer_encode_steps.cpp
   # impl/zerocopy_io.cpp
   # impl/NNDescent.cpp
@@ -100,7 +100,7 @@ set(FAISS_SRC
   # utils/extra_distances.cpp
   # utils/hamming.cpp
   utils/partitioning.cpp
-  # utils/quantize_lut.cpp
+  utils/quantize_lut.cpp
   utils/random.cpp
   # utils/sorting.cpp
   utils/utils.cpp
