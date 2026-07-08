@@ -5,9 +5,9 @@
 
 set(FAISS_SRC
   # AutoTune.cpp
-  # Clustering.cpp
+  Clustering.cpp
   # IVFlib.cpp
-  # Index.cpp
+  Index.cpp
   # Index2Layer.cpp
   # IndexAdditiveQuantizer.cpp
   # IndexBinary.cpp
@@ -16,8 +16,8 @@ set(FAISS_SRC
   # IndexBinaryHNSW.cpp
   # IndexBinaryHash.cpp
   # IndexBinaryIVF.cpp
-  # IndexFlat.cpp
-  # IndexFlatCodes.cpp
+  IndexFlat.cpp
+  IndexFlatCodes.cpp
   # IndexHNSW.cpp
   # IndexIDMap.cpp
   # IndexIVF.cpp
@@ -57,32 +57,32 @@ set(FAISS_SRC
   # clone_index.cpp
   # index_factory.cpp
   impl/AuxIndexStructures.cpp
-  # impl/ClusteringInitialization.cpp
-  # impl/CodePacker.cpp
+  impl/ClusteringInitialization.cpp
+  impl/CodePacker.cpp
   impl/IDSelector.cpp
   impl/FaissException.cpp
   impl/HNSW.cpp
   # impl/NSG.cpp
   # impl/PolysemousTraining.cpp
-  # impl/ProductQuantizer.cpp
+  impl/ProductQuantizer.cpp
   # impl/AdditiveQuantizer.cpp
-  # impl/RaBitQuantizer.cpp
-  # impl/RaBitQuantizerMultiBit.cpp
-  # impl/RaBitQStats.cpp
-  # impl/RaBitQUtils.cpp
+  impl/RaBitQuantizer.cpp
+  impl/RaBitQuantizerMultiBit.cpp
+  impl/RaBitQStats.cpp
+  impl/RaBitQUtils.cpp
   # impl/ResidualQuantizer.cpp
   # impl/LocalSearchQuantizer.cpp
   # impl/ProductAdditiveQuantizer.cpp
-  # impl/ScalarQuantizer.cpp
+  impl/ScalarQuantizer.cpp
   # impl/index_read.cpp
   # impl/index_write.cpp
   # impl/io.cpp
-  # impl/kmeans1d.cpp
+  impl/kmeans1d.cpp
   # impl/lattice_Zn.cpp
   # impl/mapped_io.cpp
-  # impl/pq4_fast_scan.cpp
-  # impl/pq4_fast_scan_search_1.cpp
-  # impl/pq4_fast_scan_search_qbs.cpp
+  impl/pq4_fast_scan.cpp
+  impl/pq4_fast_scan_search_1.cpp
+  impl/pq4_fast_scan_search_qbs.cpp
   # impl/residual_quantizer_encode_steps.cpp
   # impl/zerocopy_io.cpp
   # impl/NNDescent.cpp
@@ -92,18 +92,18 @@ set(FAISS_SRC
   # invlists/DirectMap.cpp
   # invlists/InvertedLists.cpp
   # invlists/InvertedListsIOHook.cpp
-  # utils/Heap.cpp
+  utils/Heap.cpp
   # utils/NeuralNet.cpp
   # utils/WorkerThread.cpp
   utils/distances.cpp
   utils/distances_simd.cpp
   # utils/extra_distances.cpp
   # utils/hamming.cpp
-  # utils/partitioning.cpp
-  # utils/quantize_lut.cpp
+  utils/partitioning.cpp
+  utils/quantize_lut.cpp
   utils/random.cpp
   # utils/sorting.cpp
-  # utils/utils.cpp
+  utils/utils.cpp
   # utils/distances_fused/avx512.cpp
   # utils/distances_fused/distances_fused.cpp
   # utils/distances_fused/simdlib_based.cpp

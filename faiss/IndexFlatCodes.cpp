@@ -208,11 +208,11 @@ struct Run_search_with_decompress {
         using SingleResultHandler =
                 typename BlockResultHandler::SingleResultHandler;
         using DC = GenericFlatCodesDistanceComputer<VectorDistance>;
-#pragma omp parallel // if (res.nq > 100)
+        // #pragma omp parallel // if (res.nq > 100)
         {
             std::unique_ptr<DC> dc(new DC(&index, vd));
             SingleResultHandler resi(res);
-#pragma omp for
+            // #pragma omp for
             for (int64_t q = 0; q < res.nq; q++) {
                 resi.begin(q);
                 dc->set_query(xq + vd.d * q);
