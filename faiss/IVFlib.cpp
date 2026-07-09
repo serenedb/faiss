@@ -6,7 +6,6 @@
  */
 
 #include <faiss/IVFlib.h>
-#include <omp.h>
 
 #include <memory>
 
@@ -518,14 +517,14 @@ void ivf_residual_add_from_flat_codes(
 
     // populate inverted lists
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel
+// #pragma omp parallel if (nb > 10000)
         {
-            std::vector<uint8_t> tmp_code(index->rq.code_size);
+            std::vector<uint8_t> tmp_code(index->code_size);
             std::vector<float> tmp(rq.d);
-            int nt = omp_get_num_threads();
-            int rank = omp_get_thread_num();
+            int nt = 1;   // omp_get_num_threads();
+            int rank = 0; // omp_get_thread_num();
 
-#pragma omp for
+// #pragma omp for
             for (idx_t i = 0; i < static_cast<idx_t>(nb); i++) {
                 const uint8_t* code = &raw_codes[i * code_size];
                 BitstringReader rd(code, code_size);

@@ -392,10 +392,12 @@ int pq4_preferred_qbs(int n) {
  * impl-avx2.cpp, impl-avx512.cpp, impl-neon.cpp respectively.
  ***************************************************************/
 
+#if 0
 #define THE_LEVEL_TO_DISPATCH SIMDLevel::NONE
 #include <faiss/impl/fast_scan/dispatching.h>        // IWYU pragma: keep
 #include <faiss/impl/fast_scan/rabitq_dispatching.h> // IWYU pragma: keep
 #undef THE_LEVEL_TO_DISPATCH
+#endif
 
 namespace faiss {
 
@@ -434,6 +436,7 @@ void accumulate_to_mem(
 
 } // namespace faiss
 
+#if 0
 namespace faiss {
 
 std::unique_ptr<FastScanCodeScanner> make_fast_scan_knn_scanner(
@@ -518,3 +521,4 @@ std::unique_ptr<FastScanCodeScanner> rabitq_ivf_make_knn_scanner(
 }
 
 } // namespace faiss
+#endif

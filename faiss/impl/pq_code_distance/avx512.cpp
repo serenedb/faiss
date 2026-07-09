@@ -18,6 +18,6 @@
 // NOLINTNEXTLINE(facebook-hte-InlineHeader)
 #include <faiss/impl/pq_code_distance/PQDistanceComputer_impl.h>
 // NOLINTNEXTLINE(facebook-hte-InlineHeader)
-#include <faiss/impl/pq_code_distance/IVFPQScanner_impl.h>
+// #include <faiss/impl/pq_code_distance/IVFPQScanner_impl.h>
 
 #endif // COMPILE_SIMD_AVX512

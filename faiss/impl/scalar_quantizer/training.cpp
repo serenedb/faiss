@@ -373,7 +373,7 @@ void train_NonUniform(
             }
         }
         std::vector<float> trained_d(2);
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int j = 0; j < d; j++) {
             train_Uniform(rs, rs_arg, n, k, xt.data() + j * n, trained_d);
             vmin[j] = trained_d[0];
