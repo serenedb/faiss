@@ -12,8 +12,6 @@
 #include <optional>
 #include <vector>
 
-#include <omp.h>
-
 #include <faiss/Index.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/utils/Heap.h>

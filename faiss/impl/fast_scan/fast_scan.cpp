@@ -384,19 +384,6 @@ int pq4_preferred_qbs(int n) {
 
 } // namespace faiss
 
-/***************************************************************
- * FastScanCodeScanner: NONE specialization + dispatch wrapper.
- *
- * The NONE specialization provides the scalar fallback.
- * Per-SIMD specializations (AVX2, AVX512, ARM_NEON) are in
- * impl-avx2.cpp, impl-avx512.cpp, impl-neon.cpp respectively.
- ***************************************************************/
-
-#define THE_LEVEL_TO_DISPATCH SIMDLevel::NONE
-#include <faiss/impl/fast_scan/dispatching.h>        // IWYU pragma: keep
-#include <faiss/impl/fast_scan/rabitq_dispatching.h> // IWYU pragma: keep
-#undef THE_LEVEL_TO_DISPATCH
-
 namespace faiss {
 
 using namespace simd_result_handlers;
@@ -429,91 +416,6 @@ void accumulate_to_mem(
     FAISS_THROW_IF_NOT(ntotal2 % 32 == 0);
     with_simd_level([&]<SIMDLevel SL>() {
         accumulate_to_mem_impl<SL>(nq, ntotal2, nsq, codes, LUT, accu);
-    });
-}
-
-} // namespace faiss
-
-namespace faiss {
-
-std::unique_ptr<FastScanCodeScanner> make_fast_scan_knn_scanner(
-        bool is_max,
-        int impl,
-        size_t nq,
-        size_t ntotal,
-        int64_t k,
-        float* distances,
-        int64_t* ids,
-        const IDSelector* sel,
-        bool with_id_map) {
-    return with_simd_level([&]<SIMDLevel SL>() {
-        return make_fast_scan_scanner_impl<SL>(
-                is_max, impl, nq, ntotal, k, distances, ids, sel, with_id_map);
-    });
-}
-
-std::unique_ptr<FastScanCodeScanner> make_range_scanner(
-        bool is_max,
-        RangeSearchResult& rres,
-        float radius,
-        size_t ntotal,
-        const IDSelector* sel) {
-    return with_simd_level([&]<SIMDLevel SL>() {
-        return make_range_scanner_impl<SL>(is_max, rres, radius, ntotal, sel);
-    });
-}
-
-std::unique_ptr<FastScanCodeScanner> make_partial_range_scanner(
-        bool is_max,
-        RangeSearchPartialResult& pres,
-        float radius,
-        size_t ntotal,
-        size_t q0,
-        size_t q1,
-        const IDSelector* sel) {
-    return with_simd_level([&]<SIMDLevel SL>() {
-        return make_partial_range_scanner_impl<SL>(
-                is_max, pres, radius, ntotal, q0, q1, sel);
-    });
-}
-
-std::unique_ptr<FastScanCodeScanner> rabitq_make_knn_scanner(
-        const IndexRaBitQFastScan* index,
-        bool is_max,
-        size_t nq,
-        int64_t k,
-        float* distances,
-        int64_t* ids,
-        const IDSelector* sel,
-        const FastScanDistancePostProcessing& context,
-        bool is_multi_bit) {
-    return with_simd_level([&]<SIMDLevel SL>() {
-        return rabitq_make_knn_scanner_impl<SL>(
-                index,
-                is_max,
-                nq,
-                k,
-                distances,
-                ids,
-                sel,
-                context,
-                is_multi_bit);
-    });
-}
-
-std::unique_ptr<FastScanCodeScanner> rabitq_ivf_make_knn_scanner(
-        bool is_max,
-        const IndexIVFRaBitQFastScan* index,
-        size_t nq,
-        size_t k,
-        float* distances,
-        int64_t* ids,
-        const IDSelector* sel,
-        const FastScanDistancePostProcessing* context,
-        bool multi_bit) {
-    return with_simd_level([&]<SIMDLevel SL>() {
-        return rabitq_ivf_make_knn_scanner_impl<SL>(
-                is_max, index, nq, k, distances, ids, sel, context, multi_bit);
     });
 }
 

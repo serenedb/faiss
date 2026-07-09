@@ -18,6 +18,8 @@
 // NOLINTNEXTLINE(facebook-hte-InlineHeader,facebook-unused-include-check)
 #include <faiss/impl/pq_code_distance/PQDistanceComputer_impl.h>
 // NOLINTNEXTLINE(facebook-hte-InlineHeader,facebook-unused-include-check)
-#include <faiss/impl/pq_code_distance/IVFPQScanner_impl.h>
+// IVFPQScanner_impl.h reaches into the index layer, which this build
+// compiles out.
+// #include <faiss/impl/pq_code_distance/IVFPQScanner_impl.h>
 
 #endif // COMPILE_SIMD_AVX2

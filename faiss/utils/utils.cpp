@@ -25,8 +25,6 @@
 #include <unistd.h>
 #endif // !_MSC_VER
 
-#include <omp.h>
-
 #include <algorithm>
 #include <atomic>
 #include <set>
@@ -271,20 +269,133 @@ void reflection_ref(const float* u, float* x, size_t n, size_t d, size_t nu) {
  * Some matrix manipulation functions
  ***************************************************************************/
 
+namespace {
+
+// Column-major element access: a[i,j] with leading dimension lda.
+inline float& MatAt(float* a, int lda, int i, int j) {
+    return a[i + static_cast<size_t>(j) * lda];
+}
+
+} // namespace
+
+// Pure C++ Householder QR (no LAPACK): overwrites the m x n (m >= n)
+// column-major input `a` with the m x n matrix Q of its thin QR
+// factorization A = Q * R, i.e. Q has orthonormal columns. Equivalent to
+// LAPACK's sgeqrf_ followed by sorgqr_, which this replaces since this
+// fork does not link LAPACK.
 void matrix_qr(int m, int n, float* a) {
     FAISS_THROW_IF_NOT(m >= n);
-    FINTEGER mi = m, ni = n, ki = mi < ni ? mi : ni;
-    std::vector<float> tau(ki);
-    FINTEGER lwork = -1, info;
-    float work_size;
+    const int lda = m;
+    constexpr int NB = 32;
+    std::vector<float> tau(n, 0.0f);
 
-    sgeqrf_(&mi, &ni, a, &mi, tau.data(), &work_size, &lwork, &info);
-    lwork = size_t(work_size);
-    std::vector<float> work(lwork);
+    auto gemm = [](const char* ta, const char* tb, int M, int N, int K,
+                   float alpha, const float* A, int ldA, const float* B,
+                   int ldB, float beta, float* C, int ldC) {
+        FINTEGER mm = M, nn = N, kk = K, la = ldA, lb = ldB, lc = ldC;
+        sgemm_(ta, tb, &mm, &nn, &kk, &alpha, A, &la, B, &lb, &beta, C, &lc);
+    };
 
-    sgeqrf_(&mi, &ni, a, &mi, tau.data(), work.data(), &lwork, &info);
+    std::vector<float> Vp, G(static_cast<size_t>(NB) * NB),
+            T(static_cast<size_t>(NB) * NB), W, TW;
 
-    sorgqr_(&mi, &ni, &ki, a, &mi, tau.data(), work.data(), &lwork, &info);
+    auto build_vt = [&](int kb, int ib) {
+        const int rows = m - kb;
+        Vp.assign(static_cast<size_t>(rows) * ib, 0.0f);
+        for (int c = 0; c < ib; ++c) {
+            Vp[c + static_cast<size_t>(c) * rows] = 1.0f;
+            for (int r = c + 1; r < rows; ++r) {
+                Vp[r + static_cast<size_t>(c) * rows] =
+                        MatAt(a, lda, kb + r, kb + c);
+            }
+        }
+        gemm("T", "N", ib, ib, rows, 1.0f, Vp.data(), rows, Vp.data(), rows,
+             0.0f, G.data(), ib);
+        std::fill(T.begin(), T.begin() + static_cast<size_t>(ib) * ib, 0.0f);
+        for (int c = 0; c < ib; ++c) {
+            const float tc = tau[kb + c];
+            T[c + static_cast<size_t>(c) * ib] = tc;
+            if (c > 0 && tc != 0.0f) {
+                for (int r = 0; r < c; ++r) {
+                    float acc = 0.0f;
+                    for (int s = r; s < c; ++s) {
+                        acc += T[r + static_cast<size_t>(s) * ib] *
+                                (-tc * G[s + static_cast<size_t>(c) * ib]);
+                    }
+                    T[r + static_cast<size_t>(c) * ib] = acc;
+                }
+            }
+        }
+    };
+
+    for (int kb = 0; kb < n; kb += NB) {
+        const int ib = std::min(NB, n - kb);
+        for (int k = kb; k < kb + ib; ++k) {
+            float alpha = MatAt(a, lda, k, k);
+            float xnorm2 = 0.0f;
+            for (int i = k + 1; i < m; ++i) {
+                float v = MatAt(a, lda, i, k);
+                xnorm2 += v * v;
+            }
+            if (xnorm2 == 0.0f) {
+                continue;
+            }
+            const float norm_x = std::sqrt(alpha * alpha + xnorm2);
+            const float beta = (alpha >= 0.0f) ? -norm_x : norm_x;
+            tau[k] = (beta - alpha) / beta;
+            const float inv = 1.0f / (alpha - beta);
+            for (int i = k + 1; i < m; ++i) {
+                MatAt(a, lda, i, k) *= inv;
+            }
+            MatAt(a, lda, k, k) = beta;
+            for (int j = k + 1; j < kb + ib; ++j) {
+                float dot = MatAt(a, lda, k, j);
+                for (int i = k + 1; i < m; ++i) {
+                    dot += MatAt(a, lda, i, k) * MatAt(a, lda, i, j);
+                }
+                const float f = tau[k] * dot;
+                MatAt(a, lda, k, j) -= f;
+                for (int i = k + 1; i < m; ++i) {
+                    MatAt(a, lda, i, j) -= f * MatAt(a, lda, i, k);
+                }
+            }
+        }
+        const int ncol = n - (kb + ib);
+        if (ncol > 0) {
+            const int rows = m - kb;
+            build_vt(kb, ib);
+            float* C = a + kb + static_cast<size_t>(kb + ib) * lda;
+            W.assign(static_cast<size_t>(ib) * ncol, 0.0f);
+            TW.assign(static_cast<size_t>(ib) * ncol, 0.0f);
+            gemm("T", "N", ib, ncol, rows, 1.0f, Vp.data(), rows, C, lda, 0.0f,
+                 W.data(), ib);
+            gemm("T", "N", ib, ncol, ib, 1.0f, T.data(), ib, W.data(), ib, 0.0f,
+                 TW.data(), ib);
+            gemm("N", "N", rows, ncol, ib, -1.0f, Vp.data(), rows, TW.data(), ib,
+                 1.0f, C, lda);
+        }
+    }
+
+    std::vector<float> Q(static_cast<size_t>(m) * n, 0.0f);
+    for (int j = 0; j < n; ++j) {
+        Q[j + static_cast<size_t>(j) * m] = 1.0f;
+    }
+    const int last_kb = ((n - 1) / NB) * NB;
+    for (int kb = last_kb; kb >= 0; kb -= NB) {
+        const int ib = std::min(NB, n - kb);
+        const int rows = m - kb;
+        build_vt(kb, ib);
+        float* Qsub = Q.data() + kb;
+        W.assign(static_cast<size_t>(ib) * n, 0.0f);
+        TW.assign(static_cast<size_t>(ib) * n, 0.0f);
+        gemm("T", "N", ib, n, rows, 1.0f, Vp.data(), rows, Qsub, m, 0.0f,
+             W.data(), ib);
+        gemm("N", "N", ib, n, ib, 1.0f, T.data(), ib, W.data(), ib, 0.0f,
+             TW.data(), ib);
+        gemm("N", "N", rows, n, ib, -1.0f, Vp.data(), rows, TW.data(), ib, 1.0f,
+             Qsub, m);
+    }
+    std::copy(Q.begin(), Q.end(), a);
 }
 
 /***************************************************************************
@@ -317,12 +428,12 @@ size_t merge_result_table_with(
         int64_t translation) {
     size_t n1 = 0;
 
-#pragma omp parallel reduction(+ : n1)
+    // // #pragma omp parallel reduction(+ : n1)
     {
         std::vector<int64_t> tmpI(k);
         std::vector<float> tmpD(k);
 
-#pragma omp for
+// #pragma omp for
         for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
             int64_t* lI0 = I0 + i * k;
             float* lD0 = D0 + i * k;
@@ -465,11 +576,11 @@ uint64_t bvec_checksum(size_t n, const uint8_t* a) {
 }
 
 void bvecs_checksum(size_t n, size_t d, const uint8_t* a, uint64_t* cs) {
-    // MSVC can't accept unsigned index for #pragma omp parallel for
+    // MSVC can't accept unsigned index for // #pragma omp parallel for
     // so below codes only accept n <= std::numeric_limits<ssize_t>::max()
     using ssize_t = std::make_signed<std::size_t>::type;
     const ssize_t size = n;
-#pragma omp parallel for if (size > 1000)
+    // // #pragma omp parallel for if (size > 1000)
     for (ssize_t i_ = 0; i_ < size; i_++) {
         const auto i = static_cast<std::size_t>(i_);
         cs[i] = bvec_checksum(d, a + i * d);
@@ -531,45 +642,6 @@ uint64_t hash_bytes(const uint8_t* bytes, int64_t n) {
     }
     x ^= n;
     return x;
-}
-
-bool check_openmp() {
-    omp_set_num_threads(10);
-
-    if (omp_get_max_threads() != 10) {
-        return false;
-    }
-
-    std::vector<int> nt_per_thread(10);
-    size_t sum = 0;
-    bool in_parallel = true;
-#pragma omp parallel reduction(+ : sum)
-    {
-        if (!omp_in_parallel()) {
-            in_parallel = false;
-        }
-
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
-
-        nt_per_thread[rank] = nt;
-#pragma omp for
-        for (int i = 0; i < 1000 * 1000 * 10; i++) {
-            sum += i;
-        }
-    }
-
-    if (!in_parallel) {
-        return false;
-    }
-    if (nt_per_thread[0] != 10) {
-        return false;
-    }
-    if (sum == 0) {
-        return false;
-    }
-
-    return true;
 }
 
 namespace {

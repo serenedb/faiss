@@ -176,7 +176,8 @@ void Clustering::train_impl(
         x = x_new;
         del3.reset(weights_new);
         weights = weights_new;
-    } else if (static_cast<size_t>(nx) < k * min_points_per_centroid) {
+    } else if (verbose &&
+               static_cast<size_t>(nx) < k * min_points_per_centroid) {
         fprintf(stderr,
                 "WARNING clustering %" PRId64
                 " points to %zd centroids: "
@@ -586,6 +587,9 @@ void ProgressiveDimClustering::train(
         idx_t n,
         const float* x,
         ProgressiveDimIndexFactory& factory) {
+    FAISS_THROW_MSG(
+            "ProgressiveDimClustering disabled (VectorTransform not built)");
+#if 0
     int d_prev = 0;
 
     PCAMatrix pca(static_cast<int>(d), static_cast<int>(d));
@@ -642,6 +646,7 @@ void ProgressiveDimClustering::train(
         pca.reverse_transform(k, centroids.data(), cent_transformed.data());
         cent_transformed.swap(centroids);
     }
+#endif
 }
 
 } // namespace faiss

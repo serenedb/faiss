@@ -10,7 +10,6 @@
 #include <faiss/utils/distances_dispatch.h>
 #include <faiss/utils/extra_distances.h>
 
-#include <omp.h>
 #include <algorithm>
 
 #include <faiss/impl/AuxIndexStructures.h>
@@ -76,7 +75,7 @@ void pairwise_extra_distances(
     }
 
     with_VectorDistance(d, mt, metric_arg, [&](auto vd) {
-#pragma omp parallel for if (nq > 10)
+// #pragma omp parallel for if (nq > 10)
         for (int64_t i = 0; i < nq; i++) {
             const float* xqi = xq + i * ldq;
             const float* xbj = xb;
@@ -105,12 +104,12 @@ void knn_extra_metrics(
     with_VectorDistance(d, mt, metric_arg, [&](auto vd) {
         using C = typename decltype(vd)::C;
         size_t check_period = InterruptCallback::get_period_hint(ny * d);
-        check_period *= omp_get_max_threads();
+        check_period *= 1; // omp_get_max_threads();
 
         for (size_t i0 = 0; i0 < nx; i0 += check_period) {
             size_t i1 = std::min(i0 + check_period, nx);
 
-#pragma omp parallel for
+// #pragma omp parallel for
             for (int64_t i = i0; i < static_cast<int64_t>(i1); i++) {
                 const float* x_i = x + i * d;
                 const float* y_j = y;
