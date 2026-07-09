@@ -16,8 +16,8 @@
 set(FAISS_SIMD_AVX2_SRC
   impl/fast_scan/impl-avx2.cpp
   impl/hnsw/avx2.cpp
-  impl/result_handler/avx2.cpp
   impl/pq_code_distance/avx2.cpp
+  impl/result_handler/avx2.cpp
   impl/scalar_quantizer/sq-avx2.cpp
   impl/approx_topk/avx2.cpp
   impl/binary_hamming/avx2.cpp
@@ -26,22 +26,19 @@ set(FAISS_SIMD_AVX2_SRC
   utils/hamming_distance/hamming_avx2.cpp
   utils/simd_impl/partitioning_avx2.cpp
   utils/distances_fused/simdlib_based.cpp
-  impl/scalar_quantizer/EDENQuantizer-avx2.cpp
   utils/simd_impl/rabitq_avx2.cpp
   utils/simd_impl/super_kmeans_kernels_avx2.cpp
 )
 set(FAISS_SIMD_AVX512_SRC
-  impl/fast_scan/impl-avx512.cpp
+  # impl/fast_scan/impl-avx512.cpp
   impl/hnsw/avx512.cpp
-  impl/result_handler/avx512.cpp
   impl/pq_code_distance/avx512.cpp
-  impl/polysemous_training/avx512.cpp
+  impl/result_handler/avx512.cpp
   impl/scalar_quantizer/sq-avx512.cpp
   impl/binary_hamming/avx512.cpp
   utils/simd_impl/distances_avx512.cpp
   utils/distances_fused/avx512.cpp
   utils/hamming_distance/hamming_avx512.cpp
-  impl/scalar_quantizer/EDENQuantizer-avx512.cpp
   utils/simd_impl/rabitq_avx512.cpp
   utils/simd_impl/super_kmeans_kernels_avx512.cpp
 )
@@ -75,7 +72,7 @@ set(FAISS_SIMD_SVE_SRC
   utils/simd_impl/super_kmeans_kernels_sve.cpp
 )
 set(FAISS_SIMD_RVV_SRC
-  impl/fast_scan/impl-riscv.cpp
+  # impl/fast_scan/impl-riscv.cpp
   impl/pq_code_distance/rvv.cpp
   impl/scalar_quantizer/sq-rvv.cpp
   impl/binary_hamming/rvv.cpp
@@ -100,64 +97,62 @@ endif()
 # =============================================================================
 
 set(FAISS_SRC
-  AutoTune.cpp
+  # AutoTune.cpp
   Clustering.cpp
   SuperKMeans.cpp
-  IVFlib.cpp
+  # IVFlib.cpp
   Index.cpp
-  Index2Layer.cpp
-  IndexAdditiveQuantizer.cpp
-  IndexBinary.cpp
-  IndexBinaryFlat.cpp
-  IndexBinaryFromFloat.cpp
-  IndexBinaryHNSW.cpp
-  IndexBinaryHash.cpp
-  IndexBinaryIVF.cpp
-  IndexEDEN.cpp
+  # Index2Layer.cpp
+  # IndexAdditiveQuantizer.cpp
+  # IndexBinary.cpp
+  # IndexBinaryFlat.cpp
+  # IndexBinaryFromFloat.cpp
+  # IndexBinaryHNSW.cpp
+  # IndexBinaryHash.cpp
+  # IndexBinaryIVF.cpp
   IndexFlat.cpp
   IndexFlatCodes.cpp
-  IndexHNSW.cpp
-  IndexIDMap.cpp
-  IndexIVF.cpp
-  IndexIVFAdditiveQuantizer.cpp
-  IndexIVFFlat.cpp
-  IndexIVFFlatPanorama.cpp
-  IndexIVFPQ.cpp
-  IndexIVFEDEN.cpp
-  IndexIVFFastScan.cpp
-  IndexIVFAdditiveQuantizerFastScan.cpp
-  IndexIVFPQFastScan.cpp
-  IndexIVFPQR.cpp
-  IndexIVFRaBitQ.cpp
-  IndexIVFRaBitQFastScan.cpp
-  IndexIVFSpectralHash.cpp
-  IndexLSH.cpp
-  IndexNNDescent.cpp
-  IndexLattice.cpp
-  IndexNSG.cpp
-  IndexPQ.cpp
-  IndexFastScan.cpp
-  IndexAdditiveQuantizerFastScan.cpp
-  IndexIVFIndependentQuantizer.cpp
-  IndexPQFastScan.cpp
-  IndexPreTransform.cpp
-  IndexRaBitQ.cpp
-  IndexRaBitQFastScan.cpp
-  IndexRefine.cpp
-  IndexReplicas.cpp
-  IndexRowwiseMinMax.cpp
-  IndexSQFastScan.cpp
-  IndexIVFSQFastScan.cpp
-  IndexScalarQuantizer.cpp
-  IndexShards.cpp
-  IndexShardsIVF.cpp
-  IndexNeuralNetCodec.cpp
-  MatrixStats.cpp
-  MetaIndexes.cpp
+  # IndexHNSW.cpp
+  # IndexIDMap.cpp
+  # IndexIVF.cpp
+  # IndexIVFAdditiveQuantizer.cpp
+  # IndexIVFFlat.cpp
+  # IndexIVFFlatPanorama.cpp
+  # IndexIVFPQ.cpp
+  # IndexIVFEDEN.cpp
+  # IndexIVFFastScan.cpp
+  # IndexIVFAdditiveQuantizerFastScan.cpp
+  # IndexIVFPQFastScan.cpp
+  # IndexIVFPQR.cpp
+  # IndexIVFRaBitQ.cpp
+  # IndexIVFRaBitQFastScan.cpp
+  # IndexIVFSpectralHash.cpp
+  # IndexLSH.cpp
+  # IndexNNDescent.cpp
+  # IndexLattice.cpp
+  # IndexNSG.cpp
+  # IndexPQ.cpp
+  # IndexFastScan.cpp
+  # IndexAdditiveQuantizerFastScan.cpp
+  # IndexIVFIndependentQuantizer.cpp
+  # IndexPQFastScan.cpp
+  # IndexPreTransform.cpp
+  # IndexRaBitQ.cpp
+  # IndexRaBitQFastScan.cpp
+  # IndexRefine.cpp
+  # IndexReplicas.cpp
+  # IndexRowwiseMinMax.cpp
+  # IndexSQFastScan.cpp
+  # IndexIVFSQFastScan.cpp
+  # IndexScalarQuantizer.cpp
+  # IndexShards.cpp
+  # IndexShardsIVF.cpp
+  # IndexNeuralNetCodec.cpp
+  # MatrixStats.cpp
+  # MetaIndexes.cpp
   VectorTransform.cpp
-  clone_index.cpp
-  index_factory.cpp
-  impl/AdSampling.cpp
+  # clone_index.cpp
+  # index_factory.cpp
   impl/AuxIndexStructures.cpp
   impl/VisitedTable.cpp
   impl/ClusteringInitialization.cpp
@@ -170,57 +165,57 @@ set(FAISS_SRC
   impl/hnsw/LockVector.cpp
   impl/hnsw/MinimaxHeap.cpp
   impl/result_handler/ResultHandler.cpp
-  impl/NSG.cpp
-  impl/pipnn/HashPrune.cpp
-  impl/pipnn/Partition.cpp
-  impl/pipnn/kernels.cpp
-  impl/PolysemousTraining.cpp
+  # impl/NSG.cpp
+  # impl/pipnn/HashPrune.cpp
+  # impl/pipnn/Partition.cpp
+  # impl/pipnn/kernels.cpp
+  # impl/PolysemousTraining.cpp
   impl/ProductQuantizer.cpp
   impl/pq_code_distance/pq_code_distance-generic.cpp
-  impl/pq_code_distance/IVFPQ_QueryTables.cpp
-  impl/AdditiveQuantizer.cpp
-  impl/scalar_quantizer/EDENQuantizer.cpp
+  # impl/pq_code_distance/IVFPQ_QueryTables.cpp
+  # impl/AdditiveQuantizer.cpp
   impl/RaBitQuantizer.cpp
   impl/RaBitQuantizerMultiBit.cpp
   impl/RaBitQUtils.cpp
-  impl/ResidualQuantizer.cpp
-  impl/LocalSearchQuantizer.cpp
-  impl/ProductAdditiveQuantizer.cpp
+  # impl/ResidualQuantizer.cpp
+  # impl/LocalSearchQuantizer.cpp
+  # impl/ProductAdditiveQuantizer.cpp
   impl/ScalarQuantizer.cpp
   impl/scalar_quantizer/training.cpp
-  impl/index_read.cpp
-  impl/index_write.cpp
-  impl/io.cpp
+  # impl/index_read.cpp
+  # impl/index_write.cpp
+  # impl/io.cpp
   impl/kmeans1d.cpp
-  impl/lattice_Zn.cpp
-  impl/mapped_io.cpp
+  # impl/lattice_Zn.cpp
+  # impl/mapped_io.cpp
   impl/fast_scan/fast_scan.cpp
-  impl/residual_quantizer_encode_steps.cpp
-  impl/zerocopy_io.cpp
-  impl/NNDescent.cpp
+  # impl/residual_quantizer_encode_steps.cpp
+  # impl/zerocopy_io.cpp
+  # impl/NNDescent.cpp
   impl/Panorama.cpp
   impl/PanoramaStats.cpp
+  impl/AdSampling.cpp
   impl/PdxLayout.cpp
-  invlists/BlockInvertedLists.cpp
-  invlists/DirectMap.cpp
-  invlists/InvertedLists.cpp
-  invlists/InvertedListsIOHook.cpp
+  # invlists/BlockInvertedLists.cpp
+  # invlists/DirectMap.cpp
+  # invlists/InvertedLists.cpp
+  # invlists/InvertedListsIOHook.cpp
   utils/Heap.cpp
-  utils/NeuralNet.cpp
-  utils/WorkerThread.cpp
+  # utils/NeuralNet.cpp
+  # utils/WorkerThread.cpp
   utils/distances.cpp
   utils/distances_simd.cpp
-  utils/extra_distances.cpp
-  utils/hamming.cpp
+  # utils/extra_distances.cpp
+  # utils/hamming.cpp
   utils/partitioning.cpp
   utils/quantize_lut.cpp
   utils/random.cpp
-  utils/sorting.cpp
+  # utils/sorting.cpp
   utils/utils.cpp
   utils/simd_levels.cpp
+  # utils/distances_fused/avx512.cpp
   utils/distances_fused/distances_fused.cpp
-  factory_tools.cpp
-  # build.cpp excluded due to build errors on Windows
+  # utils/distances_fused/simdlib_based.cpp
 )
 
 if(FAISS_ENABLE_SVS)
@@ -250,7 +245,6 @@ set(FAISS_HEADERS
   IndexBinaryHNSW.h
   IndexBinaryHash.h
   IndexBinaryIVF.h
-  IndexEDEN.h
   IndexFlat.h
   IndexFlatCodes.h
   IndexHNSW.h
@@ -261,7 +255,6 @@ set(FAISS_HEADERS
   IndexIVFFlat.h
   IndexIVFFlatPanorama.h
   IndexIVFPQ.h
-  IndexIVFEDEN.h
   IndexIVFFastScan.h
   IndexIVFAdditiveQuantizerFastScan.h
   IndexIVFPQFastScan.h
@@ -308,7 +301,6 @@ set(FAISS_HEADERS
   impl/CodePackerRaBitQ.h
   impl/IDSelector.h
   impl/DistanceComputer.h
-  impl/EDENQuantizer.h
   impl/FaissAssert.h
   impl/FaissException.h
   impl/HNSW.h
@@ -328,7 +320,6 @@ set(FAISS_HEADERS
   impl/PanoramaStats.h
   impl/PdxLayout.h
   impl/PolysemousTraining.h
-  impl/polysemous_training/dispatch.h
   impl/ProductQuantizer-inl.h
   impl/ProductQuantizer.h
   impl/Quantizer.h
@@ -473,6 +464,8 @@ else()
 endif()
 
 add_library(faiss ${FAISS_SRC})
+target_compile_options(faiss PUBLIC -Wno-suggest-override -Wno-sign-compare -Wno-suggest-destructor-override)
+
 
 add_library(faiss_avx2 ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "avx2" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512" AND NOT FAISS_OPT_LEVEL STREQUAL "avx512_spr")
@@ -521,16 +514,10 @@ else()
   # we need bigobj for the swig wrapper
   add_compile_options(/bigobj)
 endif()
-target_sources(faiss_avx512_spr PRIVATE
-  ${FAISS_SIMD_AVX2_SRC}
-  ${FAISS_SIMD_AVX512_SRC}
-  ${FAISS_SIMD_AVX512_VPOPCNT_SRC}
-  ${FAISS_SIMD_AVX512_SPR_SRC})
-target_compile_definitions(faiss_avx512_spr PRIVATE
-  COMPILE_SIMD_AVX2
-  COMPILE_SIMD_AVX512
-  COMPILE_SIMD_AVX512_VPOPCNT
-  COMPILE_SIMD_AVX512_SPR)
+target_sources(faiss_avx512_spr PRIVATE ${FAISS_SIMD_AVX2_SRC} ${FAISS_SIMD_AVX512_SRC}
+  ${FAISS_SIMD_AVX512_VPOPCNT_SRC} ${FAISS_SIMD_AVX512_SPR_SRC})
+target_compile_definitions(faiss_avx512_spr PRIVATE COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512
+  COMPILE_SIMD_AVX512_VPOPCNT COMPILE_SIMD_AVX512_SPR)
 
 add_library(faiss_sve ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "sve")
@@ -572,9 +559,7 @@ if(FAISS_OPT_LEVEL STREQUAL "dd")
   # Architecture-specific SIMD definitions for Dynamic Dispatch
   if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
     target_compile_definitions(faiss PRIVATE
-      COMPILE_SIMD_AVX2
-      COMPILE_SIMD_AVX512
-      COMPILE_SIMD_AVX512_VPOPCNT
+      COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512 COMPILE_SIMD_AVX512_VPOPCNT
       COMPILE_SIMD_AVX512_SPR)
     if(NOT WIN32)
       # Baseline flags for common files (prevents auto-vectorization)
@@ -613,11 +598,11 @@ if(FAISS_OPT_LEVEL STREQUAL "dd")
         TARGET_DIRECTORY faiss
         PROPERTIES COMPILE_OPTIONS "/arch:AVX512"
       )
-      # MSVC has no per-feature flag for VPOPCNTDQ or BITALG.
-      set_source_files_properties(${FAISS_SIMD_AVX512_VPOPCNT_SRC}
-        TARGET_DIRECTORY faiss
-        PROPERTIES COMPILE_OPTIONS "/arch:AVX512"
-      )
+      # MSVC has no per-feature flag for VPOPCNTDQ; /arch:AVX512
+      # enables it as part of the AVX-512 feature set used by recent
+      # toolchains. (Newer MSVC supports __isa_available checks at
+      # runtime; the SPR specialization is gated by COMPILE_SIMD_AVX512_SPR
+      # at the source level, so this is safe.)
       set_source_files_properties(${FAISS_SIMD_AVX512_SPR_SRC}
         TARGET_DIRECTORY faiss
         PROPERTIES COMPILE_OPTIONS "/arch:AVX512"
@@ -706,7 +691,6 @@ target_include_directories(faiss_sve PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
 set_target_properties(faiss faiss_avx2 faiss_avx512 faiss_avx512_spr faiss_sve PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
   WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
@@ -754,56 +738,37 @@ if(FAISS_USE_LTO)
   endif()
 endif()
 
-find_package(OpenMP REQUIRED)
-target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
 
-if(FAISS_ENABLE_MKL)
-  find_package(MKL)
-endif()
-if(MKL_FOUND)
-  target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_avx512 PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_avx512_spr PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(faiss_sve PRIVATE ${MKL_LIBRARIES})
-else()
-  if(BLAS_LIBRARIES AND LAPACK_LIBRARIES)
-    message(STATUS "Using user-provided BLAS libraries: ${BLAS_LIBRARIES}")
-    message(STATUS "Using user-provided LAPACK libraries: ${LAPACK_LIBRARIES}")
-  else()
-    # Prefer threaded OpenBLAS (OpenMP or pthreads) over the serial default.
-    # On RHEL/Fedora, the default libopenblas.so is the serial variant;
-    # libopenblaso is OpenMP-threaded and libopenblasp is pthreads-threaded.
-    find_library(BLAS_PREFER_THREADED NAMES openblaso openblasp)
-    if(BLAS_PREFER_THREADED)
-      message(STATUS "Using threaded OpenBLAS: ${BLAS_PREFER_THREADED}")
-      set(BLAS_LIBRARIES "${BLAS_PREFER_THREADED}")
-      # OpenBLAS bundles LAPACK routines, so no separate find_package(LAPACK)
-      # is needed. Calling it would trigger FindBLAS internally, which
-      # unconditionally resets BLAS_LIBRARIES to the serial libopenblas,
-      # causing auditwheel to bundle both serial and threaded variants.
-      set(LAPACK_LIBRARIES "${BLAS_PREFER_THREADED}")
-    else()
-      find_package(BLAS REQUIRED)
-      find_package(LAPACK REQUIRED)
-    endif()
-  endif()
-  target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_avx2 PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_avx512 PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_avx512_spr PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(faiss_sve PRIVATE ${BLAS_LIBRARIES})
+# find_package(OpenMP REQUIRED)
+# target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
+# target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
 
-  target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_avx2 PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_avx512 PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_avx512_spr PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
-endif()
+# if(FAISS_ENABLE_MKL)
+#   find_package(MKL REQUIRED)
+# endif()
+# if(MKL_FOUND)
+#   target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
+#   target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
+#   target_link_libraries(faiss_avx512 PRIVATE ${MKL_LIBRARIES})
+#   target_link_libraries(faiss_avx512_spr PRIVATE ${MKL_LIBRARIES})
+# else()
+#   find_package(BLAS REQUIRED)
+#   target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_avx2 PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_avx512 PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_avx512_spr PRIVATE ${BLAS_LIBRARIES})
+#   target_link_libraries(faiss_sve PRIVATE ${BLAS_LIBRARIES})
+
+#   find_package(LAPACK REQUIRED)
+#   target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_avx2 PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_avx512 PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_avx512_spr PRIVATE ${LAPACK_LIBRARIES})
+#   target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
+# endif()
 
 install(TARGETS faiss
   EXPORT faiss-targets
@@ -812,36 +777,35 @@ install(TARGETS faiss
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-if(FAISS_OPT_LEVEL STREQUAL "avx2")
-  install(TARGETS faiss_avx2
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "avx512")
-  install(TARGETS faiss_avx2 faiss_avx512
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "avx512_spr")
-  install(TARGETS faiss_avx2 faiss_avx512_spr
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-if(FAISS_OPT_LEVEL STREQUAL "sve")
-  install(TARGETS faiss_sve
-    EXPORT faiss-targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
-endif()
-# Note: FAISS_OPT_LEVEL=dd builds DD support into main faiss target,
-# so no separate faiss_dd install is needed
+
+# if(FAISS_OPT_LEVEL STREQUAL "avx2")
+#   install(TARGETS faiss_avx2
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx512")
+#   install(TARGETS faiss_avx2 faiss_avx512
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "avx512_spr")
+#   install(TARGETS faiss_avx2 faiss_avx512_spr
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
+# if(FAISS_OPT_LEVEL STREQUAL "sve")
+#   install(TARGETS faiss_sve
+#     EXPORT faiss-targets
+#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#   )
+# endif()
 
 foreach(header ${FAISS_HEADERS})
   get_filename_component(dir ${header} DIRECTORY )
@@ -866,6 +830,6 @@ install(FILES ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
 )
 
-install(EXPORT faiss-targets
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
-)
+# install(EXPORT faiss-targets
+#   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
+# )

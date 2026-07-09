@@ -18,8 +18,6 @@
 #include <limits>
 #include <vector>
 
-#include <omp.h>
-
 #include <faiss/Index.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/simd_dispatch.h>
@@ -58,10 +56,10 @@ void compute_centroids_impl(
 
     std::atomic<bool> invalid_assignment{false};
     const int64_t num_centroids = static_cast<int64_t>(k + k_frozen);
-#pragma omp parallel
+// #pragma omp parallel
     {
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
+        int nt = 1;   // omp_get_num_threads();
+        int rank = 0; // omp_get_thread_num();
 
         // this thread is taking care of centroids c0:c1
         size_t c0 = (k * rank) / nt;
@@ -87,7 +85,7 @@ void compute_centroids_impl(
             invalid_assignment.load(std::memory_order_relaxed),
             "invalid cluster assignment");
 
-#pragma omp parallel for
+// #pragma omp parallel for
     for (idx_t ci = 0; ci < static_cast<idx_t>(k); ci++) {
         if (hassign[ci] == 0) {
             continue;
@@ -249,7 +247,7 @@ bool fp16_all_finite(size_t n, const uint16_t* x) {
     // binary16 NaNs and infinities are the values with all exponent bits set
     constexpr uint16_t exponent_mask = 0x7c00;
     std::atomic<bool> all_finite{true};
-#pragma omp parallel for if (n > fp16_parallel_threshold)
+// #pragma omp parallel for if (n > fp16_parallel_threshold)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         if ((x[i] & exponent_mask) == exponent_mask) {
             all_finite.store(false, std::memory_order_relaxed);

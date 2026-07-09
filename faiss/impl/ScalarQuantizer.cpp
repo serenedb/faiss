@@ -661,7 +661,7 @@ void ScalarQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
     std::unique_ptr<SQuantizer> squant(select_quantizer());
 
     memset(codes, 0, code_size * n);
-#pragma omp parallel for if (n > 100)
+// #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         squant->encode_vector(x + i * d, codes + i * code_size);
     }
@@ -674,7 +674,7 @@ void ScalarQuantizer::decode(const uint8_t* codes, float* x, size_t n) const {
     }
     std::unique_ptr<SQuantizer> squant(select_quantizer());
 
-#pragma omp parallel for if (n > 100)
+// #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         squant->decode_vector(codes + i * code_size, x + i * d);
     }
@@ -690,12 +690,28 @@ ScalarQuantizer::SQDistanceComputer* ScalarQuantizer::get_distance_computer(
             });
 }
 
+// IndexIVFScalarQuantizer is compiled out of this build, and so is this
+// scanner's declaration in the header. Kept behind #if 0 so the code is
+// still here to re-enable, matching how the rest of the index layer is
+// disabled in this fork.
+#if 0
 InvertedListScanner* ScalarQuantizer::select_InvertedListScanner(
         MetricType mt,
         const Index* quantizer,
         bool store_pairs,
         const IDSelector* sel,
         bool by_residual) const {
+    // IndexIVFScalarQuantizer is compiled out of this build, so this scanner
+    // has no caller. The dispatch below is unreachable and kept only so the
+    // file keeps type-checking against upstream's API.
+    (void)mt;
+    (void)quantizer;
+    (void)store_pairs;
+    (void)sel;
+    (void)by_residual;
+    FAISS_THROW_MSG(
+            "ScalarQuantizer::select_InvertedListScanner: "
+            "IndexIVFScalarQuantizer disabled");
     return with_simd_level_fallback<AVAILABLE_SIMD_LEVELS_BASE_WITH_SPR>(
             [&]<SIMDLevel SL>() -> InvertedListScanner* {
                 return scalar_quantizer::sq_select_InvertedListScanner<SL>(
@@ -710,5 +726,6 @@ InvertedListScanner* ScalarQuantizer::select_InvertedListScanner(
                         by_residual);
             });
 }
+#endif
 
 } // namespace faiss

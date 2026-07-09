@@ -7,11 +7,15 @@
 
 #ifdef COMPILE_SIMD_AVX2
 
+#if 0
 #define THE_LEVEL_TO_DISPATCH SIMDLevel::AVX2
 #include <faiss/impl/fast_scan/dispatching.h>        // IWYU pragma: keep
 #include <faiss/impl/fast_scan/rabitq_dispatching.h> // IWYU pragma: keep
+#endif
 
 #include <faiss/impl/fast_scan/decompose_qbs.h>
+#include <faiss/impl/fast_scan/fast_scan.h>
+#include <faiss/impl/fast_scan/LookupTableScaler.h>
 
 namespace faiss {
 

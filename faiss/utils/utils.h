@@ -175,9 +175,6 @@ void fp16_to_fp32(size_t n, const uint16_t* x, float* out);
 /** A reasonable hashing function */
 uint64_t hash_bytes(const uint8_t* bytes, int64_t n);
 
-/** Whether OpenMP annotations were respected. */
-bool check_openmp();
-
 /** This class is used to combine range and knn search results
  * in contrib.exhaustive_search.range_search_gpu */
 

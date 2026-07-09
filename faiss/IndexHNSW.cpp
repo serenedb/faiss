@@ -217,7 +217,7 @@ void hnsw_add_vertices_deterministic(
             // unsynchronized write costs at most one extra poll.
             bool interrupt = false;
 
-#pragma omp parallel if (e - s > 100)
+// #pragma omp parallel if (e - s > 100)
             {
                 std::unique_ptr<VisitedTable> vt =
                         VisitedTable::create(ntotal, hnsw.use_visited_hashset);
@@ -227,7 +227,7 @@ void hnsw_add_vertices_deterministic(
                         pt_reverse_edges;
                 size_t counter = 0;
 
-#pragma omp for schedule(static)
+// #pragma omp for schedule(static)
                 for (int64_t i = s; i < static_cast<int64_t>(e); i++) {
                     if (interrupt) {
                         continue; // cannot break out of an OpenMP for loop
@@ -311,12 +311,12 @@ void hnsw_add_vertices_deterministic(
             }
             Edge* base = reverse_edges.get();
 
-#pragma omp parallel if (total > 100)
+// #pragma omp parallel if (total > 100)
             {
                 std::unique_ptr<DistanceComputer> dis(make_distance_computer());
                 // Not schedule(dynamic): the libomp dynamic dispatcher
                 // segfaults in some build configs.
-#pragma omp for schedule(static)
+// #pragma omp for schedule(static)
                 for (int64_t b = 0; b < static_cast<int64_t>(kNumBuckets);
                      b++) {
                     Edge* p = base + bstart[b];
@@ -444,7 +444,7 @@ void hnsw_search(
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
 
-#pragma omp parallel if (i1 - i0 > 1)
+// #pragma omp parallel if (i1 - i0 > 1)
         {
             VisitedTable* vt = nullptr;
             std::unique_ptr<typename BlockResultHandler::SingleResultHandler>
@@ -460,9 +460,9 @@ void hnsw_search(
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
 
-#pragma omp for reduction(                                               \
-                + : n1, n2, ndis, nhops, n_rabitq_1bit, n_rabitq_refine) \
-        schedule(guided)
+// #pragma omp for reduction(                                               \
+                // + : n1, n2, ndis, nhops, n_rabitq_1bit, n_rabitq_refine) \
+        // schedule(guided)
             for (idx_t i = i0; i < i1; i++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;
@@ -604,12 +604,12 @@ void IndexHNSW::reconstruct(idx_t key, float* recons) const {
  * link_singletons
  **************************************************************/
 void IndexHNSW::shrink_level_0_neighbors(int new_size) {
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::unique_ptr<DistanceComputer> dis(
                 storage_distance_computer(storage));
 
-#pragma omp for
+// #pragma omp for
         for (idx_t i = 0; i < ntotal; i++) {
             size_t begin, end;
             hnsw.neighbor_range(i, 0, &begin, &end);
@@ -663,7 +663,7 @@ void IndexHNSW::search_level_0(
 
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
-#pragma omp parallel
+// #pragma omp parallel
         {
             std::unique_ptr<DistanceComputer> qdis;
             HNSWStats search_stats;
@@ -679,7 +679,7 @@ void IndexHNSW::search_level_0(
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
 
-#pragma omp for
+// #pragma omp for
             for (idx_t i = 0; i < n; i++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;
@@ -733,7 +733,7 @@ void IndexHNSW::init_level_0_from_knngraph(
         const idx_t* I) {
     int dest_size = hnsw.nb_neighbors(0);
 
-#pragma omp parallel for
+// #pragma omp parallel for
     for (idx_t i = 0; i < ntotal; i++) {
         DistanceComputer* qdis = storage_distance_computer(storage);
         std::vector<float> vec(d);
@@ -775,7 +775,7 @@ void IndexHNSW::init_level_0_from_entry_points(
         const storage_idx_t* nearests) {
     LockVector locks(ntotal);
 
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::unique_ptr<VisitedTable> vt =
                 VisitedTable::create(ntotal, hnsw.use_visited_hashset);
@@ -784,7 +784,7 @@ void IndexHNSW::init_level_0_from_entry_points(
                 storage_distance_computer(storage));
         std::vector<float> vec(storage->d);
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
         for (int i = 0; i < n; i++) {
             storage_idx_t pt_id = points[i];
             storage_idx_t nearest = nearests[i];
@@ -808,7 +808,7 @@ void IndexHNSW::init_level_0_from_entry_points(
 void IndexHNSW::reorder_links() {
     int M = hnsw.nb_neighbors(0);
 
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::vector<float> distances(M);
         std::vector<size_t> order(M);
@@ -816,7 +816,7 @@ void IndexHNSW::reorder_links() {
         std::unique_ptr<DistanceComputer> dis(
                 storage_distance_computer(storage));
 
-#pragma omp for
+// #pragma omp for
         for (storage_idx_t i = 0; i < ntotal; i++) {
             size_t begin, end;
             hnsw.neighbor_range(i, 0, &begin, &end);
@@ -1162,7 +1162,7 @@ void IndexHNSW2Level::search(
 
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
-#pragma omp parallel
+// #pragma omp parallel
         {
             // visited table (not hash set) for tri-state flags.
             std::unique_ptr<VisitedTable> vt;
@@ -1177,7 +1177,7 @@ void IndexHNSW2Level::search(
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
 
-#pragma omp for reduction(+ : n1, n2, ndis, nhops)
+// #pragma omp for reduction(+ : n1, n2, ndis, nhops)
             for (idx_t i = 0; i < n; i++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;
@@ -1339,7 +1339,7 @@ void IndexHNSWCagra::search(
         std::vector<float> nearest_d(n);
 
         auto pick_entrypoints = [&]<class C>() {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (idx_t i = 0; i < n; i++) {
                 std::unique_ptr<DistanceComputer> dis(
                         storage_distance_computer(this->storage));

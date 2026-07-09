@@ -481,7 +481,7 @@ void HadamardRotation::apply_noalloc(idx_t n, const float* x, float* xt) const {
     // Three rounds scale by p^(3/2). Normalize once at the end.
     float total_scale = 1.0f / (p * std::sqrt(static_cast<float>(p)));
 
-#pragma omp parallel for schedule(dynamic)
+// #pragma omp parallel for schedule(dynamic)
     for (idx_t i = 0; i < n; i++) {
         const float* xi = x + i * d;
         float* xo = xt + i * p;
@@ -526,7 +526,7 @@ void HadamardRotation::reverse_transform(idx_t n, const float* xt, float* x)
     // total_scale = 1/(p*sqrt(p)), so the inverse applies the same factor.
     const float inverse_scale = 1.0f / (p * std::sqrt(static_cast<float>(p)));
 
-#pragma omp parallel for schedule(dynamic)
+// #pragma omp parallel for schedule(dynamic)
     for (idx_t i = 0; i < n; i++) {
         const float* xi = xt + i * p;
         float* xo = x + i * p;
