@@ -513,6 +513,10 @@ struct QuantizerTurboQuantFull<NBits, SIMDLevel::NONE>
     }
 
     void rr_forward(const float* x, float* out) const {
+        (void)x;
+        (void)out;
+        FAISS_THROW_MSG("QuantizerTurboQuantFull::rr_forward: LAPACK not linked");
+#if 0
         float alpha = 1.0f;
         float beta = 0.0f;
         int di = static_cast<int>(d);
@@ -530,9 +534,14 @@ struct QuantizerTurboQuantFull<NBits, SIMDLevel::NONE>
                &beta,
                out,
                &di);
+#endif
     }
 
     void rr_inverse(const float* x, float* out) const {
+        (void)x;
+        (void)out;
+        FAISS_THROW_MSG("QuantizerTurboQuantFull::rr_inverse: LAPACK not linked");
+#if 0
         float alpha = 1.0f;
         float beta = 0.0f;
         int di = static_cast<int>(d);
@@ -550,6 +559,7 @@ struct QuantizerTurboQuantFull<NBits, SIMDLevel::NONE>
                &beta,
                out,
                &di);
+#endif
     }
 
     /// Store MSE index for dimension j using BIT-PLANE layout.

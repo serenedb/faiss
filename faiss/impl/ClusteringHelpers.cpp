@@ -16,8 +16,6 @@
 #include <limits>
 #include <vector>
 
-#include <omp.h>
-
 #include <faiss/Index.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/utils/random.h>
@@ -116,10 +114,10 @@ void compute_centroids(
 
     size_t line_size = codec ? codec->sa_code_size() : d * sizeof(float);
 
-#pragma omp parallel
+// #pragma omp parallel
     {
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
+        int nt = 1;   // omp_get_num_threads();
+        int rank = 0; // omp_get_thread_num();
 
         // this thread is taking care of centroids c0:c1
         size_t c0 = (k * rank) / nt;
@@ -158,7 +156,7 @@ void compute_centroids(
         }
     }
 
-#pragma omp parallel for
+// #pragma omp parallel for
     for (idx_t ci = 0; ci < static_cast<idx_t>(k); ci++) {
         if (hassign[ci] == 0) {
             continue;

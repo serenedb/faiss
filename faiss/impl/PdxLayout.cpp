@@ -78,7 +78,7 @@ void de_pdxify(
 }
 
 void compute_partial_norms(const float* X, int n, int d, int p, float* norms) {
-#pragma omp parallel for
+// #pragma omp parallel for
     for (int i = 0; i < n; ++i) {
         float s = 0.0f;
         const float* row = X + static_cast<size_t>(i) * d;

@@ -114,7 +114,7 @@ void HNSW::print_neighbor_stats(int level) const {
            level,
            nb_neighbors(level));
     size_t tot_neigh = 0, tot_common = 0, tot_reciprocal = 0, n_node = 0;
-#pragma omp parallel for reduction(+ : tot_neigh) reduction(+ : tot_common) \
+// #pragma omp parallel for reduction(+ : tot_neigh) reduction(+ : tot_common) \
         reduction(+ : tot_reciprocal) reduction(+ : n_node)
     for (idx_t i = 0; i < static_cast<idx_t>(levels.size()); i++) {
         if (levels[i] > level) {
@@ -796,7 +796,7 @@ void add_with_locks_impl(
         bool keep_max_size_level0) {
     storage_idx_t nearest = hnsw.entry_point;
     if (nearest == -1) { // avoid locking after the first point.
-#pragma omp critical
+// #pragma omp critical
         if (hnsw.entry_point == -1) { // double-check under lock.
             hnsw.max_level = pt_level;
             hnsw.entry_point = pt_id;
@@ -836,7 +836,7 @@ void add_with_locks_impl(
 
     locks.unlock(pt_id);
 
-#pragma omp critical
+// #pragma omp critical
     {
         if (pt_level > hnsw.max_level) {
             hnsw.max_level = pt_level;

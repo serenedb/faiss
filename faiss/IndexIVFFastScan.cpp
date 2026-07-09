@@ -10,8 +10,6 @@
 #include <cstdio>
 #include <set>
 
-#include <omp.h>
-
 #include <memory>
 
 #include <faiss/IndexIVFPQ.h>
@@ -307,7 +305,7 @@ void IndexIVFFastScan::compute_LUT_uint8(
     }
 
     // OMP for MSVC requires i to have signed integral type
-#pragma omp parallel for if (n > 100)
+// #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         const float* t_in = dis_tables_float.get() + i * dim123;
         const float* b_in = nullptr;
@@ -477,7 +475,8 @@ int compute_search_nslice(
         size_t n,
         size_t cur_nprobe) {
     int nslice;
-    if (n <= static_cast<size_t>(omp_get_max_threads())) {
+    size_t threads = 1; // omp_get_max_threads();
+    if (n <= threads) {
         nslice = static_cast<int>(n);
     } else if (index->lookup_table_is_3d()) {
         // make sure we don't make too big LUT tables
@@ -487,11 +486,11 @@ int compute_search_nslice(
         size_t max_lut_size = precomputed_table_max_bytes;
         // how many queries we can handle within mem budget
         size_t nq_ok = std::max(max_lut_size / lut_size_per_query, size_t(1));
-        nslice = static_cast<int>(roundup(
-                std::max(size_t(n / nq_ok), size_t(1)), omp_get_max_threads()));
+        nslice = static_cast<int>(
+                roundup(std::max(size_t(n / nq_ok), size_t(1)), threads));
     } else {
         // LUTs unlikely to be a limiting factor
-        nslice = omp_get_max_threads();
+        nslice = static_cast<int>(threads);
     }
     return nslice;
 }
@@ -559,8 +558,8 @@ void IndexIVFFastScan::search_dispatch_implem(
         }
     }
 
-    bool multiple_threads =
-            n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
+    bool multiple_threads = false;
+    // n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
     if (impl >= 100) {
         multiple_threads = false;
         impl -= 100;
@@ -647,7 +646,7 @@ void IndexIVFFastScan::search_dispatch_implem(
                 search_implem_14(
                         n, x, k, distances, labels, cq, impl, context, params);
             } else {
-#pragma omp parallel for reduction(+ : ndis, nlist_visited)
+// #pragma omp parallel for reduction(+ : ndis, nlist_visited)
                 for (int slice = 0; slice < nslice; slice++) {
                     idx_t i0 = n * slice / nslice;
                     idx_t i1 = n * (slice + 1) / nslice;
@@ -753,8 +752,8 @@ void IndexIVFFastScan::range_search_dispatch_implem(
 
     CoarseQuantizedWithBuffer cq(cq_in);
 
-    bool multiple_threads =
-            n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
+    bool multiple_threads = false;
+    // n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
     if (impl >= 100) {
         multiple_threads = false;
         impl -= 100;
@@ -804,11 +803,11 @@ void IndexIVFFastScan::range_search_dispatch_implem(
     } else {
         // explicitly slice over threads
         int nslice = compute_search_nslice(this, n, cq.nprobe);
-#pragma omp parallel
+// #pragma omp parallel
         {
             RangeSearchPartialResult pres(&rres);
 
-#pragma omp for reduction(+ : ndis, nlist_visited)
+// #pragma omp for reduction(+ : ndis, nlist_visited)
             for (int slice = 0; slice < nslice; slice++) {
                 idx_t i0 = n * slice / nslice;
                 idx_t i1 = n * (slice + 1) / nslice;
@@ -877,7 +876,7 @@ void IndexIVFFastScan::search_implem_1(
 
     size_t ndis = 0, nlist_visited = 0;
     size_t cur_nprobe = cq.nprobe;
-#pragma omp parallel for reduction(+ : ndis, nlist_visited)
+// #pragma omp parallel for reduction(+ : ndis, nlist_visited)
     for (idx_t i = 0; i < n; i++) {
         int64_t* heap_ids = labels + i * k;
         float* heap_dis = distances + i * k;
@@ -949,7 +948,7 @@ void IndexIVFFastScan::search_implem_2(
     size_t ndis = 0, nlist_visited = 0;
     size_t cur_nprobe = cq.nprobe;
 
-#pragma omp parallel for reduction(+ : ndis, nlist_visited)
+// #pragma omp parallel for reduction(+ : ndis, nlist_visited)
     for (idx_t i = 0; i < n; i++) {
         std::vector<uint16_t> tmp_dis(k);
         int64_t* heap_ids = labels + i * k;
@@ -1430,7 +1429,7 @@ void IndexIVFFastScan::search_implem_14(
     size_t ndis = 0;
     size_t nlist_visited = 0;
 
-#pragma omp parallel reduction(+ : ndis, nlist_visited)
+// #pragma omp parallel reduction(+ : ndis, nlist_visited)
     {
         // storage for each thread
         std::vector<idx_t> local_idx(k * n);
@@ -1463,7 +1462,7 @@ void IndexIVFFastScan::search_implem_14(
         std::vector<int> probe_map;
         probe_map.reserve(actual_qbs2);
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
         for (idx_t cluster = 0; cluster < static_cast<idx_t>(ses.size());
              cluster++) {
             size_t i0 = ses[cluster].start;
@@ -1534,15 +1533,15 @@ void IndexIVFFastScan::search_implem_14(
         handler_ptr->end();
 
         // merge per-thread results
-#pragma omp single
+// #pragma omp single
         {
             // we init the results as a heap
             for (idx_t i = 0; i < n; i++) {
                 init_result(distances + i * k, labels + i * k);
             }
         }
-#pragma omp barrier
-#pragma omp critical
+// #pragma omp barrier
+// #pragma omp critical
         {
             // write to global heap  #go over only the queries
             for (std::set<int>::iterator it = q_set.begin(); it != q_set.end();
@@ -1557,8 +1556,8 @@ void IndexIVFFastScan::search_implem_14(
             IVFFastScan_stats.t_copy_pack += t_copy_pack;
             IVFFastScan_stats.t_scan += t_scan;
         }
-#pragma omp barrier
-#pragma omp single
+// #pragma omp barrier
+// #pragma omp single
         {
             for (idx_t i = 0; i < n; i++) {
                 reorder_result(distances + i * k, labels + i * k);
@@ -1595,7 +1594,7 @@ void IndexIVFFastScan::reconstruct_orig_invlists() {
     FAISS_THROW_IF_NOT(orig_invlists != nullptr);
     FAISS_THROW_IF_NOT(orig_invlists->list_size(0) == 0);
 
-#pragma omp parallel for if (nlist > 100)
+// #pragma omp parallel for if (nlist > 100)
     for (idx_t list_no = 0; list_no < static_cast<idx_t>(nlist); list_no++) {
         InvertedLists::ScopedCodes codes(invlists, list_no);
         InvertedLists::ScopedIds ids(invlists, list_no);
@@ -1623,11 +1622,11 @@ void IndexIVFFastScan::sa_decode(idx_t n, const uint8_t* codes, float* x)
         const {
     size_t coarse_size = coarse_code_size();
 
-#pragma omp parallel if (n > 1)
+// #pragma omp parallel if (n > 1)
     {
         std::vector<float> residual(d);
 
-#pragma omp for
+// #pragma omp for
         for (idx_t i = 0; i < n; i++) {
             const uint8_t* code = codes + i * (code_size + coarse_size);
             int64_t list_no = decode_listno(code);

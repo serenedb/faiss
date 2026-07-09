@@ -196,12 +196,14 @@ struct ScalarQuantizer : Quantizer {
     SQDistanceComputer* get_distance_computer(
             MetricType metric = METRIC_L2) const;
 
+#if 0
     InvertedListScanner* select_InvertedListScanner(
             MetricType mt,
             const Index* quantizer,
             bool store_pairs,
             const IDSelector* sel,
             bool by_residual = false) const;
+#endif
 };
 
 } // namespace faiss

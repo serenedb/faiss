@@ -7,7 +7,6 @@
 
 #include <faiss/IndexFastScan.h>
 
-#include <omp.h>
 #include <cstring>
 #include <memory>
 
@@ -320,7 +319,7 @@ void IndexFastScan::search_dispatch_implem(
         search_implem_234<Cfloat>(n, x, k, distances, labels, context);
     } else if (impl >= 12 && impl <= 15) {
         FAISS_THROW_IF_NOT(ntotal < INT_MAX);
-        int nt = std::min(omp_get_max_threads(), int(n));
+        int nt = 1; // std::min(omp_get_max_threads(), int(n));
         // Fall back to single-threaded implementations when parallelization not
         // beneficial:
         // - Single-core system (omp_get_max_threads() = 1)

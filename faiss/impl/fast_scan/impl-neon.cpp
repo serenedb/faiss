@@ -7,11 +7,15 @@
 
 #ifdef COMPILE_SIMD_ARM_NEON
 
+#if 0
 #define THE_LEVEL_TO_DISPATCH SIMDLevel::ARM_NEON
 #include <faiss/impl/fast_scan/dispatching.h>        // IWYU pragma: keep
 #include <faiss/impl/fast_scan/rabitq_dispatching.h> // IWYU pragma: keep
+#endif
 
 #include <faiss/impl/fast_scan/decompose_qbs.h>
+#include <faiss/impl/fast_scan/fast_scan.h>
+#include <faiss/impl/fast_scan/LookupTableScaler.h>
 
 namespace faiss {
 
@@ -35,6 +39,7 @@ void accumulate_to_mem_impl<SIMDLevel::ARM_NEON>(
 
 // ARM_SVE: forward to ARM_NEON implementation until a dedicated SVE
 // specialization is written (same pattern as scalar_quantizer/sq-neon.cpp).
+#if 0
 #ifdef COMPILE_SIMD_ARM_SVE
 
 namespace faiss {
@@ -116,5 +121,6 @@ std::unique_ptr<FastScanCodeScanner> rabitq_ivf_make_knn_scanner_impl<
 } // namespace faiss
 
 #endif // COMPILE_SIMD_ARM_SVE
+#endif
 
 #endif // COMPILE_SIMD_ARM_NEON

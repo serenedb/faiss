@@ -15,8 +15,6 @@
 #include <cstring>
 #include <vector>
 
-#include <omp.h>
-
 #include <faiss/impl/AuxIndexStructures.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/IDSelector.h>
@@ -204,7 +202,7 @@ void fvec_norms_L2(
         size_t d,
         size_t nx) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (nx > 10000)
+// #pragma omp parallel for if (nx > 10000)
         for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
             nr[i] = sqrtf(fvec_norm_L2sqr<SL>(x + i * d, d));
         }
@@ -217,12 +215,14 @@ void fvec_norms_L2sqr(
         size_t d,
         size_t nx) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (nx > 10000)
+// #pragma omp parallel for if (nx > 10000)
         for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
             nr[i] = fvec_norm_L2sqr<SL>(x + i * d, d);
         }
     });
 }
+
+#if 1
 
 // The following is a workaround to a problem
 // in OpenMP in fbcode. The crash occurs
@@ -252,7 +252,7 @@ void fvec_renorm_L2_noomp(size_t d, size_t nx, float* __restrict x) {
 
 void fvec_renorm_L2_omp(size_t d, size_t nx, float* __restrict x) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (nx > 10000)
+// #pragma omp parallel for if (nx > 10000)
         for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
             float* __restrict xi = x + i * d;
             float nr = fvec_norm_L2sqr<SL>(xi, d);
@@ -291,13 +291,13 @@ void exhaustive_inner_product_seq(
         BlockResultHandler& res) {
     using SingleResultHandler =
             typename BlockResultHandler::SingleResultHandler;
-    [[maybe_unused]] int nt = std::min(int(nx), omp_get_max_threads());
+    [[maybe_unused]] int nt = std::min(int(nx), 1 /*omp_get_max_threads()*/);
 
-#pragma omp parallel num_threads(nt)
+    // // #pragma omp parallel num_threads(nt)
     {
         SingleResultHandler resi(res);
         with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp for
+// #pragma omp for
             for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
                 const float* x_i = x + i * d;
                 const float* y_j = y;
@@ -327,13 +327,13 @@ void exhaustive_L2sqr_seq(
         BlockResultHandler& res) {
     using SingleResultHandler =
             typename BlockResultHandler::SingleResultHandler;
-    [[maybe_unused]] int nt = std::min(int(nx), omp_get_max_threads());
+    [[maybe_unused]] int nt = std::min(int(nx), 1 /*omp_get_max_threads()*/);
 
-#pragma omp parallel num_threads(nt)
+    // // #pragma omp parallel num_threads(nt)
     {
         SingleResultHandler resi(res);
         with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp for
+// #pragma omp for
             for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
                 const float* x_i = x + i * d;
                 const float* y_j = y;
@@ -385,6 +385,7 @@ void exhaustive_inner_product_blas(
             }
             /* compute the actual dot products */
             {
+#if 0
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
                 sgemm_("Transpose",
@@ -400,6 +401,14 @@ void exhaustive_inner_product_blas(
                        &zero,
                        ip_block.get(),
                        &nyi);
+#else
+                for (int64_t bi = i0; bi < (int64_t)i1; bi++) {
+                    for (size_t bj = j0; bj < j1; bj++) {
+                        ip_block[(bi - i0) * (j1 - j0) + (bj - j0)] =
+                                fvec_inner_product(x + bi * d, y + bj * d, d);
+                    }
+                }
+#endif
             }
 
             res.add_results(j0, j1, ip_block.get());
@@ -457,6 +466,7 @@ void exhaustive_L2sqr_blas_default_impl(
             }
             /* compute the actual dot products */
             {
+#if 0
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
                 sgemm_("Transpose",
@@ -472,6 +482,14 @@ void exhaustive_L2sqr_blas_default_impl(
                        &zero,
                        ip_block.get(),
                        &nyi);
+#else
+                for (int64_t bi = i0; bi < (int64_t)i1; bi++) {
+                    for (size_t bj = j0; bj < j1; bj++) {
+                        ip_block[(bi - i0) * (j1 - j0) + (bj - j0)] =
+                                fvec_inner_product(x + bi * d, y + bj * d, d);
+                    }
+                }
+#endif
             }
             for (size_t i = i0; i < i1; i++) {
                 float* ip_line = ip_block.get() + (i - i0) * (j1 - j0);
@@ -527,9 +545,11 @@ void exhaustive_L2sqr_blas<Top1BlockResultHandler<CMax<float, int64_t>>>(
         Top1BlockResultHandler<CMax<float, int64_t>>& res,
         const float* y_norms) {
     // use a faster fused kernel if available
+#if 0
     if (exhaustive_L2sqr_fused_cmax(x, y, d, nx, ny, res, y_norms)) {
         return;
     }
+#endif
 
     with_selected_simd_levels<AVAILABLE_SIMD_LEVELS_A2>([&]<SIMDLevel SL>() {
         if constexpr (SL == SIMDLevel::AVX2 || SL == SIMDLevel::ARM_SVE) {
@@ -608,7 +628,7 @@ static void knn_db_parallel_impl(
     using T = typename C::T;
     using TI = typename C::TI;
 
-    int nt = omp_get_max_threads();
+    int nt = 1; // omp_get_max_threads();
     const size_t bs_y = distance_compute_blas_database_bs;
 
     // Per-thread result heaps: nt threads x nx queries x k results
@@ -630,9 +650,9 @@ static void knn_db_parallel_impl(
         }
     }
 
-#pragma omp parallel num_threads(nt)
+// #pragma omp parallel num_threads(nt)
     {
-        int tid = omp_get_thread_num();
+        int tid = 0; // omp_get_thread_num();
         size_t j_begin = static_cast<size_t>(tid) * ny / nt;
         size_t j_end = static_cast<size_t>(tid + 1) * ny / nt;
         size_t local_ny = j_end - j_begin;
@@ -665,6 +685,7 @@ static void knn_db_parallel_impl(
                 size_t block_ny = jj1 - jj0;
 
                 {
+#if 0
                     float one = 1, zero = 0;
                     FINTEGER nyi = static_cast<FINTEGER>(block_ny);
                     FINTEGER nxi = static_cast<FINTEGER>(nx);
@@ -682,6 +703,16 @@ static void knn_db_parallel_impl(
                            &zero,
                            ip_block.get(),
                            &nyi);
+#else
+                    for (size_t bi = 0; bi < nx; bi++) {
+                        for (size_t bj = 0; bj < block_ny; bj++) {
+                            ip_block[bi * block_ny + bj] = fvec_inner_product(
+                                    x + bi * d,
+                                    y + (j_begin + jj0 + bj) * d,
+                                    d);
+                        }
+                    }
+#endif
                 }
 
                 for (size_t i = 0; i < nx; i++) {
@@ -716,7 +747,7 @@ static void knn_db_parallel_impl(
     }
 
     // Merge per-thread heaps into output, parallelized over queries
-#pragma omp parallel for
+// #pragma omp parallel for
     for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
         heap_heapify<C>(k, vals + i * k, ids + i * k);
 
@@ -745,7 +776,7 @@ static bool should_use_db_parallel(
     if (sel) {
         return false;
     }
-    int nt = omp_get_max_threads();
+    int nt = 1; // omp_get_max_threads();
     size_t min_ny = std::max(
             kDbParallelMinVectors,
             static_cast<size_t>(nt) *
@@ -923,7 +954,7 @@ void fvec_inner_products_by_idx(
         size_t nx,
         size_t ny) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t j = 0; j < static_cast<int64_t>(nx); j++) {
             const int64_t* __restrict idsj = ids + j * ny;
             const float* xj = x + j * d;
@@ -950,7 +981,7 @@ void fvec_L2sqr_by_idx(
         size_t nx,
         size_t ny) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t j = 0; j < static_cast<int64_t>(nx); j++) {
             const int64_t* __restrict idsj = ids + j * ny;
             const float* xj = x + j * d;
@@ -975,7 +1006,7 @@ void pairwise_indexed_L2sqr(
         const int64_t* iy,
         float* dis) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (n > 1)
+// #pragma omp parallel for if (n > 1)
         for (int64_t j = 0; j < static_cast<int64_t>(n); j++) {
             if (ix[j] >= 0 && iy[j] >= 0) {
                 dis[j] = fvec_L2sqr<SL>(x + d * ix[j], y + d * iy[j], d);
@@ -995,7 +1026,7 @@ void pairwise_indexed_inner_product(
         const int64_t* iy,
         float* dis) {
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (n > 1)
+// #pragma omp parallel for if (n > 1)
         for (int64_t j = 0; j < static_cast<int64_t>(n); j++) {
             if (ix[j] >= 0 && iy[j] >= 0) {
                 dis[j] =
@@ -1026,7 +1057,7 @@ void knn_inner_products_by_idx(
     }
 
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (nx > 100)
+// #pragma omp parallel for if (nx > 100)
         for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
             const float* x_ = x + i * d;
             const int64_t* idsi = ids + i * ld_ids;
@@ -1066,7 +1097,7 @@ void knn_L2sqr_by_idx(
         ld_ids = ny;
     }
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (nx > 100)
+// #pragma omp parallel for if (nx > 100)
         for (int64_t i = 0; i < static_cast<int64_t>(nx); i++) {
             const float* x_ = x + i * d;
             const int64_t* __restrict idsi = ids + i * ld_ids;
@@ -1115,12 +1146,12 @@ void pairwise_L2sqr(
     float* b_norms = dis;
 
     with_simd_level([&]<SIMDLevel SL>() {
-#pragma omp parallel for if (nb > 1)
+// #pragma omp parallel for if (nb > 1)
         for (int64_t i = 0; i < nb; i++) {
             b_norms[i] = fvec_norm_L2sqr<SL>(xb + i * ldb, d);
         }
 
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t i = 1; i < nq; i++) {
             float q_norm = fvec_norm_L2sqr<SL>(xq + i * ldq, d);
             for (int64_t j = 0; j < nb; j++) {
@@ -1137,6 +1168,7 @@ void pairwise_L2sqr(
     });
 
     {
+#if 0
         FINTEGER nbi = nb, nqi = nq, di = d, ldqi = ldq, ldbi = ldb, lddi = ldd;
         float one = 1.0, minus_2 = -2.0;
 
@@ -1153,6 +1185,14 @@ void pairwise_L2sqr(
                &one,
                dis,
                &lddi);
+#else
+        for (int64_t i = 0; i < nq; i++) {
+            for (int64_t j = 0; j < nb; j++) {
+                dis[i * ldd + j] += -2.0f *
+                        fvec_inner_product(xq + i * ldq, xb + j * ldb, d);
+            }
+        }
+#endif
     }
 }
 
@@ -1162,7 +1202,7 @@ void inner_product_to_L2sqr(
         const float* nr2,
         size_t n1,
         size_t n2) {
-#pragma omp parallel for
+// #pragma omp parallel for
     for (int64_t j = 0; j < static_cast<int64_t>(n1); j++) {
         float* disj = dis + j * n2;
         for (size_t i = 0; i < n2; i++) {
@@ -1170,5 +1210,7 @@ void inner_product_to_L2sqr(
         }
     }
 }
+
+#endif
 
 } // namespace faiss

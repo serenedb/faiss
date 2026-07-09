@@ -202,7 +202,7 @@ double run_iter_pruned(
         // just d_prime) because tau must be an exact distance for the
         // chi-squared pruning bound to be valid. Cost is O(bx * d) per
         // x-batch, amortized across the y-batch tiles that follow.
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int i = 0; i < bx; ++i) {
             const int j_prev = state.assignments[xi + i];
             const float* xrow =
@@ -220,30 +220,19 @@ double run_iter_pruned(
         for (int yj = 0; yj < k; yj += cp.y_batch) {
             const int by = std::min(cp.y_batch, k - yj);
 
-            // GEMM phase: column-major sgemm computes
+            // GEMM phase (no BLAS in this fork): scalar dot products
             //   partial_ip[i*by + j] = <X[xi+i, 0:dp], Y[yj+j, 0:dp]>.
             {
-                FINTEGER M = by;
-                FINTEGER N_ = bx;
-                FINTEGER K_ = dp;
-                float alpha = 1.0f;
-                float beta = 0.0f;
-                FINTEGER lda_y = d;
-                FINTEGER lda_x = d;
-                FINTEGER ldc = by;
-                sgemm_("Transpose",
-                       "Not transpose",
-                       &M,
-                       &N_,
-                       &K_,
-                       &alpha,
-                       state.Y_tilde.data() + static_cast<size_t>(yj) * d,
-                       &lda_y,
-                       state.X_tilde.data() + static_cast<size_t>(xi) * d,
-                       &lda_x,
-                       &beta,
-                       scratch.partial_ip.data(),
-                       &ldc);
+                for (int i = 0; i < bx; ++i) {
+                    const float* xrow = state.X_tilde.data() +
+                            static_cast<size_t>(xi + i) * d;
+                    for (int j = 0; j < by; ++j) {
+                        const float* yrow = state.Y_tilde.data() +
+                                static_cast<size_t>(yj + j) * d;
+                        scratch.partial_ip[static_cast<size_t>(i) * by + j] =
+                                fvec_inner_product(xrow, yrow, dp);
+                    }
+                }
             }
 
             // One SIMD dispatch per (xi, yj) tile — block_l2<SL> below is
@@ -252,8 +241,8 @@ double run_iter_pruned(
                 [[maybe_unused]] const int omp_chunk_local = cp.omp_chunk;
                 int64_t total_pairs_local = 0;
                 int64_t pruned_at_gemm_local = 0;
-#pragma omp parallel for schedule(dynamic, omp_chunk_local) \
-        reduction(+ : total_pairs_local) reduction(+ : pruned_at_gemm_local)
+// #pragma omp parallel for schedule(dynamic, omp_chunk_local)
+                // reduction(+ : total_pairs_local) reduction(+ : pruned_at_gemm_local)
                 for (int i = 0; i < bx; ++i) {
                     // tau is the best full-d distance found so far for this
                     // point; tightened as closer centroids are found.

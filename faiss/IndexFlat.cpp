@@ -18,7 +18,7 @@
 #include <faiss/utils/extra_distances.h>
 #include <faiss/utils/prefetch.h>
 #include <faiss/utils/sorting.h>
-#include <omp.h>
+// #include <omp.h>
 #include <cstring>
 
 namespace faiss {
@@ -44,6 +44,8 @@ void IndexFlat::search(
         float_maxheap_array_t res = {size_t(n), size_t(k), labels, distances};
         knn_L2sqr(x, get_xb(), d, n, ntotal, &res, nullptr, sel);
     } else {
+        FAISS_THROW_MSG("metric type not supported (extra metrics disabled)");
+#if 0
         knn_extra_metrics(
                 x,
                 get_xb(),
@@ -56,6 +58,7 @@ void IndexFlat::search(
                 distances,
                 labels,
                 sel);
+#endif
     }
 }
 
@@ -273,7 +276,10 @@ FlatCodesDistanceComputer* IndexFlat::get_FlatCodesDistanceComputer() const {
     } else if (metric_type == METRIC_INNER_PRODUCT) {
         with_simd_level([&]<SIMDLevel SL>() { dc = new FlatIPDis<SL>(*this); });
     } else {
+        FAISS_THROW_MSG("metric type not supported (extra metrics disabled)");
+#if 0
         dc = get_extra_distance_computer(d, metric_type, metric_arg, get_xb());
+#endif
     }
     return dc;
 }
@@ -423,12 +429,16 @@ IndexFlat1D::IndexFlat1D(bool continuous_update_in)
 /// if not continuous_update, call this between the last add and
 /// the first search
 void IndexFlat1D::update_permutation() {
+    FAISS_THROW_MSG(
+            "IndexFlat1D::update_permutation disabled (sorting not built)");
+#if 0
     perm.resize(ntotal);
-    if (ntotal < 1000000) {
+    // if (ntotal < 1000000) {
         fvec_argsort(ntotal, get_xb(), (size_t*)perm.data());
-    } else {
-        fvec_argsort_parallel(ntotal, get_xb(), (size_t*)perm.data());
-    }
+    // } else {
+    //     fvec_argsort_parallel(ntotal, get_xb(), (size_t*)perm.data());
+    // }
+#endif
 }
 
 void IndexFlat1D::add(idx_t n, const float* x) {
@@ -458,7 +468,7 @@ void IndexFlat1D::search(
             "Call update_permutation before search");
     const float* xb = get_xb();
 
-#pragma omp parallel for if (n > 10000)
+    // #pragma omp parallel for if (n > 10000)
     for (idx_t i = 0; i < n; i++) {
         float q = x[i]; // query
         float* D = distances + i * k;
@@ -583,10 +593,10 @@ inline void flat_pano_search_core(
     IDSelector* sel = params ? params->sel : nullptr;
     bool use_sel = sel != nullptr;
 
-    [[maybe_unused]] int nt = std::min(int(n), omp_get_max_threads());
+    [[maybe_unused]] int nt = 1; // std::min(int(n), omp_get_max_threads());
     size_t n_batches = (index.ntotal + index.batch_size - 1) / index.batch_size;
 
-#pragma omp parallel num_threads(nt)
+    // #pragma omp parallel num_threads(nt)
     {
         SingleResultHandler res(handler);
 
@@ -596,7 +606,7 @@ inline void flat_pano_search_core(
         std::vector<float> exact_distances(index.batch_size);
         std::vector<float> dot_buffer(index.batch_size);
 
-#pragma omp for
+        // #pragma omp for
         for (int64_t i = 0; i < n; i++) {
             const float* xi = x + i * index.d;
             index.pano.compute_query_cum_sums(xi, query_cum_norms.data());
@@ -800,9 +810,9 @@ void IndexFlatPanorama::search_subset(
             FAISS_THROW_IF_NOT(k > 0);
             FAISS_THROW_IF_NOT(batch_size == 1);
 
-            [[maybe_unused]] int nt = std::min(int(n), omp_get_max_threads());
+            [[maybe_unused]] int nt = 1; // std::min(int(n), omp_get_max_threads());
 
-#pragma omp parallel num_threads(nt)
+// #pragma omp parallel num_threads(nt)
             {
                 SingleResultHandler res(handler);
 
@@ -823,7 +833,7 @@ void IndexFlatPanorama::search_subset(
                 //    point to the heap.
                 //    - Else, prune if lower bound exceeds k-th best distance.
                 // 3. After all levels, update heap if the point survived.
-#pragma omp for
+// #pragma omp for
                 for (idx_t i = 0; i < n; i++) {
                     const idx_t* __restrict idsi = base_labels + i * k_base;
                     const float* xi = x + i * d;

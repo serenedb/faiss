@@ -358,7 +358,7 @@ struct HeapBlockResultHandler : TopkBlockResultHandler<C, use_sel> {
 
     /// add results for query i0..i1 and j0..j1
     void add_results(size_t j0, size_t j1, const T* dis_in) final {
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t i = static_cast<int64_t>(i0); i < static_cast<int64_t>(i1);
              i++) {
             T* heap_dis = this->dis_tab + i * k;
@@ -378,7 +378,7 @@ struct HeapBlockResultHandler : TopkBlockResultHandler<C, use_sel> {
 
     /// series of results for queries i0..i1 is done
     void end_multiple() final {
-#pragma omp parallel for schedule(static) if ((i1 - i0) * k >= 1024)
+// #pragma omp parallel for schedule(static) if ((i1 - i0) * k >= 1024)
         for (int64_t i = static_cast<int64_t>(i0); i < static_cast<int64_t>(i1);
              i++) {
             heap_reorder<C>(k, this->dis_tab + i * k, this->ids_tab + i * k);
@@ -554,7 +554,7 @@ struct ReservoirBlockResultHandler : TopkBlockResultHandler<C, use_sel> {
 
     /// add results for query i0..i1 and j0..j1
     void add_results(size_t j0, size_t j1, const T* dis_in) {
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t i = static_cast<int64_t>(i0); i < static_cast<int64_t>(i1);
              i++) {
             ReservoirTopN<C>& reservoir =
@@ -570,7 +570,7 @@ struct ReservoirBlockResultHandler : TopkBlockResultHandler<C, use_sel> {
 
     /// series of results for queries i0..i1 is done
     void end_multiple() final {
-#pragma omp parallel for schedule(static) if ((i1 - i0) * this->k >= 1024)
+// #pragma omp parallel for schedule(static) if ((i1 - i0) * this->k >= 1024)
         for (int64_t i = static_cast<int64_t>(i0); i < static_cast<int64_t>(i1);
              i++) {
             reservoirs[i - static_cast<int64_t>(i0)].to_result(

@@ -25,8 +25,6 @@
 #include <unistd.h>
 #endif // !_MSC_VER
 
-#include <omp.h>
-
 #include <algorithm>
 #include <set>
 #include <type_traits>
@@ -255,20 +253,90 @@ void reflection_ref(const float* u, float* x, size_t n, size_t d, size_t nu) {
  * Some matrix manipulation functions
  ***************************************************************************/
 
+namespace {
+
+// Column-major element access: a[i,j] with leading dimension lda.
+inline float& MatAt(float* a, int lda, int i, int j) {
+    return a[i + static_cast<size_t>(j) * lda];
+}
+
+} // namespace
+
+// Pure C++ Householder QR (no LAPACK): overwrites the m x n (m >= n)
+// column-major input `a` with the m x n matrix Q of its thin QR
+// factorization A = Q * R, i.e. Q has orthonormal columns. Equivalent to
+// LAPACK's sgeqrf_ followed by sorgqr_, which this replaces since this
+// fork does not link LAPACK.
 void matrix_qr(int m, int n, float* a) {
     FAISS_THROW_IF_NOT(m >= n);
-    FINTEGER mi = m, ni = n, ki = mi < ni ? mi : ni;
-    std::vector<float> tau(ki);
-    FINTEGER lwork = -1, info;
-    float work_size;
+    const int lda = m;
+    std::vector<float> tau(n, 0.0f);
 
-    sgeqrf_(&mi, &ni, a, &mi, tau.data(), &work_size, &lwork, &info);
-    lwork = size_t(work_size);
-    std::vector<float> work(lwork);
+    // Reduce `a` to upper-triangular R in place, storing each
+    // reflector's sub-diagonal part back into the zeroed-out entries of
+    // its column (mirrors LAPACK's packed sgeqrf_ output).
+    for (int k = 0; k < n; ++k) {
+        float alpha = MatAt(a, lda, k, k);
+        float xnorm2 = 0.0f;
+        for (int i = k + 1; i < m; ++i) {
+            float v = MatAt(a, lda, i, k);
+            xnorm2 += v * v;
+        }
+        if (xnorm2 == 0.0f) {
+            continue; // column already reduced; tau[k] stays 0
+        }
+        const float norm_x = std::sqrt(alpha * alpha + xnorm2);
+        const float beta = (alpha >= 0.0f) ? -norm_x : norm_x;
+        const float tau_k = (beta - alpha) / beta;
+        const float inv = 1.0f / (alpha - beta);
+        for (int i = k + 1; i < m; ++i) {
+            MatAt(a, lda, i, k) *= inv;
+        }
+        MatAt(a, lda, k, k) = beta;
+        tau[k] = tau_k;
 
-    sgeqrf_(&mi, &ni, a, &mi, tau.data(), work.data(), &lwork, &info);
+        // Apply the reflector to the trailing columns: col -= tau_k * v
+        // * (v^T . col), with v = [1, a[k+1:m, k]].
+        for (int j = k + 1; j < n; ++j) {
+            float dot = MatAt(a, lda, k, j);
+            for (int i = k + 1; i < m; ++i) {
+                dot += MatAt(a, lda, i, k) * MatAt(a, lda, i, j);
+            }
+            const float f = tau_k * dot;
+            MatAt(a, lda, k, j) -= f;
+            for (int i = k + 1; i < m; ++i) {
+                MatAt(a, lda, i, j) -= f * MatAt(a, lda, i, k);
+            }
+        }
+    }
 
-    sorgqr_(&mi, &ni, &ki, a, &mi, tau.data(), work.data(), &lwork, &info);
+    // Form the explicit m x n Q = H_0 H_1 ... H_{n-1} by applying the
+    // reflectors, in reverse order, to the leading n columns of I_m.
+    std::vector<float> q(static_cast<size_t>(m) * n, 0.0f);
+    for (int j = 0; j < n; ++j) {
+        q[j + static_cast<size_t>(j) * m] = 1.0f;
+    }
+    std::vector<float> v(m);
+    for (int k = n - 1; k >= 0; --k) {
+        if (tau[k] == 0.0f) {
+            continue;
+        }
+        v[k] = 1.0f;
+        for (int i = k + 1; i < m; ++i) {
+            v[i] = MatAt(a, lda, i, k);
+        }
+        for (int j = 0; j < n; ++j) {
+            float dot = 0.0f;
+            for (int i = k; i < m; ++i) {
+                dot += v[i] * q[i + static_cast<size_t>(j) * m];
+            }
+            const float f = tau[k] * dot;
+            for (int i = k; i < m; ++i) {
+                q[i + static_cast<size_t>(j) * m] -= f * v[i];
+            }
+        }
+    }
+    std::copy(q.begin(), q.end(), a);
 }
 
 /***************************************************************************
@@ -301,12 +369,12 @@ size_t merge_result_table_with(
         int64_t translation) {
     size_t n1 = 0;
 
-#pragma omp parallel reduction(+ : n1)
+    // // #pragma omp parallel reduction(+ : n1)
     {
         std::vector<int64_t> tmpI(k);
         std::vector<float> tmpD(k);
 
-#pragma omp for
+// #pragma omp for
         for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
             int64_t* lI0 = I0 + i * k;
             float* lD0 = D0 + i * k;
@@ -468,11 +536,11 @@ uint64_t bvec_checksum(size_t n, const uint8_t* a) {
 }
 
 void bvecs_checksum(size_t n, size_t d, const uint8_t* a, uint64_t* cs) {
-    // MSVC can't accept unsigned index for #pragma omp parallel for
+    // MSVC can't accept unsigned index for // #pragma omp parallel for
     // so below codes only accept n <= std::numeric_limits<ssize_t>::max()
     using ssize_t = std::make_signed<std::size_t>::type;
     const ssize_t size = n;
-#pragma omp parallel for if (size > 1000)
+    // // #pragma omp parallel for if (size > 1000)
     for (ssize_t i_ = 0; i_ < size; i_++) {
         const auto i = static_cast<std::size_t>(i_);
         cs[i] = bvec_checksum(d, a + i * d);
@@ -534,45 +602,6 @@ uint64_t hash_bytes(const uint8_t* bytes, int64_t n) {
     }
     x ^= n;
     return x;
-}
-
-bool check_openmp() {
-    omp_set_num_threads(10);
-
-    if (omp_get_max_threads() != 10) {
-        return false;
-    }
-
-    std::vector<int> nt_per_thread(10);
-    size_t sum = 0;
-    bool in_parallel = true;
-#pragma omp parallel reduction(+ : sum)
-    {
-        if (!omp_in_parallel()) {
-            in_parallel = false;
-        }
-
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
-
-        nt_per_thread[rank] = nt;
-#pragma omp for
-        for (int i = 0; i < 1000 * 1000 * 10; i++) {
-            sum += i;
-        }
-    }
-
-    if (!in_parallel) {
-        return false;
-    }
-    if (nt_per_thread[0] != 10) {
-        return false;
-    }
-    if (sum == 0) {
-        return false;
-    }
-
-    return true;
 }
 
 namespace {

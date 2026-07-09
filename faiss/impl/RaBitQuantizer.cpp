@@ -95,7 +95,7 @@ void RaBitQuantizer::compute_codes_core(
     const size_t ex_bits = nb_bits - 1;
 
     // Compute codes
-#pragma omp parallel for if (n > 1000)
+// #pragma omp parallel for if (n > 1000)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         // Pointer to this vector's code
         uint8_t* code = codes + i * code_size;
@@ -189,7 +189,7 @@ void RaBitQuantizer::decode_core(
     const float inv_d_sqrt = (d == 0) ? 1.0f : (1.0f / std::sqrt((float)d));
     const size_t ex_bits = nb_bits - 1;
 
-#pragma omp parallel for if (n > 1000)
+// #pragma omp parallel for if (n > 1000)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         const uint8_t* code = codes + i * code_size;
 

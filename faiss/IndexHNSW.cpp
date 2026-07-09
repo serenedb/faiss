@@ -7,7 +7,6 @@
 
 #include <faiss/IndexHNSW.h>
 
-#include <omp.h>
 #include <atomic>
 #include <cinttypes>
 #include <cstdio>
@@ -148,21 +147,21 @@ void hnsw_add_vertices(
 
             bool interrupt = false;
 
-#pragma omp parallel if (i1 > i0 + 100)
+// #pragma omp parallel if (i1 > i0 + 100)
             {
                 std::unique_ptr<VisitedTable> vt =
                         VisitedTable::create(ntotal, hnsw.use_visited_hashset);
 
                 std::unique_ptr<DistanceComputer> dis(
                         storage_distance_computer(index_hnsw.storage));
-                bool do_display = verbose && omp_get_thread_num() == 0;
+                bool do_display = verbose;
                 size_t prev_display = 0;
                 size_t counter = 0;
 
                 // here we should do schedule(dynamic) but this segfaults for
                 // some versions of LLVM. The performance impact should not be
                 // too large when (i1 - i0) / num_threads >> 1
-#pragma omp for schedule(static)
+// #pragma omp for schedule(static)
                 for (int64_t i = i0; i < i1; i++) {
                     storage_idx_t pt_id = order[i];
                     dis->set_query(x + (pt_id - n0) * d);
@@ -278,7 +277,7 @@ void hnsw_search(
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
 
-#pragma omp parallel if (i1 - i0 > 1)
+// #pragma omp parallel if (i1 - i0 > 1)
         {
             std::unique_ptr<VisitedTable> vt;
             std::unique_ptr<typename BlockResultHandler::SingleResultHandler>
@@ -294,7 +293,7 @@ void hnsw_search(
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
 
-#pragma omp for reduction(+ : n1, n2, ndis, nhops) schedule(guided)
+// #pragma omp for reduction(+ : n1, n2, ndis, nhops) schedule(guided)
             for (idx_t i = i0; i < i1; i++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;
@@ -416,12 +415,12 @@ void IndexHNSW::reconstruct(idx_t key, float* recons) const {
  * link_singletons
  **************************************************************/
 void IndexHNSW::shrink_level_0_neighbors(int new_size) {
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::unique_ptr<DistanceComputer> dis(
                 storage_distance_computer(storage));
 
-#pragma omp for
+// #pragma omp for
         for (idx_t i = 0; i < ntotal; i++) {
             size_t begin, end;
             hnsw.neighbor_range(i, 0, &begin, &end);
@@ -475,7 +474,7 @@ void IndexHNSW::search_level_0(
 
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
-#pragma omp parallel
+// #pragma omp parallel
         {
             std::unique_ptr<DistanceComputer> qdis;
             HNSWStats search_stats;
@@ -490,7 +489,7 @@ void IndexHNSW::search_level_0(
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
 
-#pragma omp for
+// #pragma omp for
             for (idx_t i = 0; i < n; i++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;
@@ -515,7 +514,7 @@ void IndexHNSW::search_level_0(
                     omp_capture_exception(ex, [&] { interrupt = true; });
                 }
             }
-#pragma omp critical
+// #pragma omp critical
             {
                 hnsw_stats.combine(search_stats);
             }
@@ -536,7 +535,7 @@ void IndexHNSW::init_level_0_from_knngraph(
         const idx_t* I) {
     int dest_size = hnsw.nb_neighbors(0);
 
-#pragma omp parallel for
+// #pragma omp parallel for
     for (idx_t i = 0; i < ntotal; i++) {
         DistanceComputer* qdis = storage_distance_computer(storage);
         std::vector<float> vec(d);
@@ -578,7 +577,7 @@ void IndexHNSW::init_level_0_from_entry_points(
         const storage_idx_t* nearests) {
     locks.prepare(ntotal);
 
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::unique_ptr<VisitedTable> vt =
                 VisitedTable::create(ntotal, hnsw.use_visited_hashset);
@@ -587,7 +586,7 @@ void IndexHNSW::init_level_0_from_entry_points(
                 storage_distance_computer(storage));
         std::vector<float> vec(storage->d);
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
         for (int i = 0; i < n; i++) {
             storage_idx_t pt_id = points[i];
             storage_idx_t nearest = nearests[i];
@@ -615,7 +614,7 @@ void IndexHNSW::init_level_0_from_entry_points(
 void IndexHNSW::reorder_links() {
     int M = hnsw.nb_neighbors(0);
 
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::vector<float> distances(M);
         std::vector<size_t> order(M);
@@ -623,7 +622,7 @@ void IndexHNSW::reorder_links() {
         std::unique_ptr<DistanceComputer> dis(
                 storage_distance_computer(storage));
 
-#pragma omp for
+// #pragma omp for
         for (storage_idx_t i = 0; i < ntotal; i++) {
             size_t begin, end;
             hnsw.neighbor_range(i, 0, &begin, &end);
@@ -938,7 +937,7 @@ void IndexHNSW2Level::search(
 
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
-#pragma omp parallel
+// #pragma omp parallel
         {
             // visited table (not hash set) for tri-state flags.
             std::unique_ptr<VisitedTable> vt;
@@ -953,7 +952,7 @@ void IndexHNSW2Level::search(
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
 
-#pragma omp for reduction(+ : n1, n2, ndis, nhops)
+// #pragma omp for reduction(+ : n1, n2, ndis, nhops)
             for (idx_t i = 0; i < n; i++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;
@@ -1113,7 +1112,7 @@ void IndexHNSWCagra::search(
         std::vector<float> nearest_d(n);
 
         auto pick_entrypoints = [&]<class C>() {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (idx_t i = 0; i < n; i++) {
                 std::unique_ptr<DistanceComputer> dis(
                         storage_distance_computer(this->storage));

@@ -588,6 +588,18 @@ InvertedListScanner* sq_select_InvertedListScanner<THE_LEVEL_TO_DISPATCH>(
         bool store_pairs,
         const IDSelector* sel,
         bool by_residual) {
+    (void)qtype;
+    (void)mt;
+    (void)d;
+    (void)code_size;
+    (void)trained;
+    (void)quantizer;
+    (void)store_pairs;
+    (void)sel;
+    (void)by_residual;
+    FAISS_THROW_MSG(
+            "sq_select_InvertedListScanner: IndexIVFScalarQuantizer disabled");
+#if 0
     auto scan = [&]<class DCClass>() -> InvertedListScanner* {
         if constexpr (DCClass::Sim::metric_type == METRIC_L2) {
             return new IVFSQScannerL2<DCClass>(
@@ -744,6 +756,7 @@ InvertedListScanner* sq_select_InvertedListScanner<THE_LEVEL_TO_DISPATCH>(
                 .template operator()<SL, SimilarityIP<SL>>();
     }
     FAISS_THROW_MSG("unsupported metric type");
+#endif
 }
 
 } // namespace scalar_quantizer

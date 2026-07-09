@@ -63,7 +63,7 @@ void pq_code_distance_8bit_four_impl<SIMDLevel::RISCV_RVV>(
 // NOLINTNEXTLINE(facebook-hte-InlineHeader)
 #include <faiss/impl/pq_code_distance/PQDistanceComputer_impl.h>
 // NOLINTNEXTLINE(facebook-hte-InlineHeader)
-#include <faiss/impl/pq_code_distance/IVFPQScanner_impl.h>
+// #include <faiss/impl/pq_code_distance/IVFPQScanner_impl.h>
 
 #undef THE_SIMD_LEVEL
 

@@ -7,7 +7,6 @@
 
 #include <faiss/IndexIVF.h>
 
-#include <omp.h>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -252,10 +251,10 @@ void IndexIVF::add_core(
 
     DirectMapAdd dm_adder(direct_map, n, xids);
 
-#pragma omp parallel reduction(+ : nadd)
+// #pragma omp parallel reduction(+ : nadd)
     {
-        int nt = omp_get_num_threads();
-        int rank = omp_get_thread_num();
+        int nt = 1;   // omp_get_num_threads();
+        int rank = 0; // omp_get_thread_num();
 
         // each thread takes care of a subset of lists
         for (idx_t i = 0; i < n; i++) {
@@ -363,11 +362,11 @@ void IndexIVF::search(
     };
 
     if ((parallel_mode & ~PARALLEL_MODE_NO_HEAP_INIT) == 0) {
-        int nt = std::min(omp_get_max_threads(), int(n));
+        int nt = std::min(1 /*omp_get_max_threads()*/, int(n));
         std::vector<IndexIVFStats> stats(nt);
         std::exception_ptr ex;
 
-#pragma omp parallel for if (nt > 1)
+// #pragma omp parallel for if (nt > 1)
         for (idx_t slice = 0; slice < nt; slice++) {
             try {
                 IndexIVFStats local_stats;
@@ -468,16 +467,17 @@ void IndexIVF::search_preassigned(
     idx_t effective_max_codes =
             ensure_topk_full ? std::max(cur_max_codes, k) : cur_max_codes;
 
-    [[maybe_unused]] bool do_parallel = omp_get_max_threads() >= 2 &&
-            (pmode == 0           ? false
-                     : pmode == 3 ? n > 1
-                     : pmode == 1 ? cur_nprobe > 1
-                                  : cur_nprobe * n > 1);
+    [[maybe_unused]] bool do_parallel = false;
+    // omp_get_max_threads() >= 2 &&
+    //         (pmode == 0           ? false
+    //                  : pmode == 3 ? n > 1
+    //                  : pmode == 1 ? cur_nprobe > 1
+    //                               : cur_nprobe * n > 1);
 
     void* inverted_list_context =
             params ? params->inverted_list_context : nullptr;
 
-#pragma omp parallel if (do_parallel) reduction(+ : nlistv, ndis, nheap)
+// #pragma omp parallel if (do_parallel) reduction(+ : nlistv, ndis, nheap)
     {
         // C++ exceptions that escape an OpenMP parallel region without being
         // caught inside it call std::terminate — they cannot propagate across
@@ -624,7 +624,7 @@ void IndexIVF::search_preassigned(
              ****************************************************/
 
             if (pmode == 0 || pmode == 3) {
-#pragma omp for
+// #pragma omp for
                 for (idx_t i = 0; i < n; i++) {
                     if (interrupt.load(std::memory_order_relaxed)) {
                         continue;
@@ -678,7 +678,7 @@ void IndexIVF::search_preassigned(
                     scanner->set_query(x + i * d);
                     init_result(local_dis.data(), local_idx.data());
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
                     for (idx_t ik = 0; ik < cur_nprobe; ik++) {
                         try {
                             ndis += scan_one_list(
@@ -698,29 +698,29 @@ void IndexIVF::search_preassigned(
 
                     float* simi = distances + i * k;
                     idx_t* idxi = labels + i * k;
-#pragma omp single
+// #pragma omp single
                     init_result(simi, idxi);
 
-#pragma omp barrier
-#pragma omp critical
+// #pragma omp barrier
+// #pragma omp critical
                     {
                         add_local_results(
                                 local_dis.data(), local_idx.data(), simi, idxi);
                     }
-#pragma omp barrier
-#pragma omp single
+// #pragma omp barrier
+// #pragma omp single
                     reorder_result(simi, idxi);
                 }
             } else if (pmode == 2) {
                 std::vector<idx_t> local_idx(k);
                 std::vector<float> local_dis(k);
 
-#pragma omp single
+// #pragma omp single
                 for (int64_t i = 0; i < n; i++) {
                     init_result(distances + i * k, labels + i * k);
                 }
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
                 for (int64_t ij = 0; ij < n * cur_nprobe; ij++) {
                     try {
                         size_t i = ij / cur_nprobe;
@@ -733,7 +733,7 @@ void IndexIVF::search_preassigned(
                                 local_dis.data(),
                                 local_idx.data(),
                                 unlimited_list_size);
-#pragma omp critical
+// #pragma omp critical
                         {
                             add_local_results(
                                     local_dis.data(),
@@ -745,7 +745,7 @@ void IndexIVF::search_preassigned(
                         omp_capture_exception(ex, [&] { interrupt = true; });
                     }
                 }
-#pragma omp single
+// #pragma omp single
                 for (int64_t i = 0; i < n; i++) {
                     reorder_result(distances + i * k, labels + i * k);
                 }
@@ -844,27 +844,28 @@ void IndexIVF::range_search_preassigned(
 
     std::exception_ptr ex;
 
-    std::vector<RangeSearchPartialResult*> all_pres(omp_get_max_threads());
+    std::vector<RangeSearchPartialResult*> all_pres(1); // omp_get_max_threads()
 
     int pmode = this->parallel_mode & ~PARALLEL_MODE_NO_HEAP_INIT;
     // don't start parallel section if single query
-    [[maybe_unused]] bool do_parallel = omp_get_max_threads() >= 2 &&
-            (pmode == 3           ? false
-                     : pmode == 0 ? nx > 1
-                     : pmode == 1 ? cur_nprobe > 1
-                                  : cur_nprobe * nx > 1);
+    [[maybe_unused]] bool do_parallel = false;
+    // omp_get_max_threads() >= 2 &&
+    //         (pmode == 3           ? false
+    //                  : pmode == 0 ? nx > 1
+    //                  : pmode == 1 ? cur_nprobe > 1
+    //                               : cur_nprobe * nx > 1);
 
     void* inverted_list_context =
             params ? params->inverted_list_context : nullptr;
 
-#pragma omp parallel if (do_parallel) reduction(+ : nlistv, ndis)
+// #pragma omp parallel if (do_parallel) reduction(+ : nlistv, ndis)
     {
         try {
             RangeSearchPartialResult pres(result);
             std::unique_ptr<InvertedListScanner> scanner(
                     get_InvertedListScanner(store_pairs, sel, params));
             FAISS_THROW_IF_NOT(scanner.get());
-            all_pres[omp_get_thread_num()] = &pres;
+            all_pres[0] = &pres;
 
             // prepare the list scanning function
 
@@ -910,7 +911,7 @@ void IndexIVF::range_search_preassigned(
             };
 
             if (parallel_mode == 0) {
-#pragma omp for
+// #pragma omp for
                 for (idx_t i = 0; i < nx; i++) {
                     try {
                         scanner->set_query(x + i * d);
@@ -943,7 +944,7 @@ void IndexIVF::range_search_preassigned(
 
                     RangeQueryResult& qres = pres.new_result(i);
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
                     for (int64_t ik = 0; ik < cur_nprobe; ik++) {
                         try {
                             scan_list_func(i, ik, qres);
@@ -955,7 +956,7 @@ void IndexIVF::range_search_preassigned(
             } else if (parallel_mode == 2) {
                 RangeQueryResult* qres = nullptr;
 
-#pragma omp for schedule(dynamic)
+// #pragma omp for schedule(dynamic)
                 for (idx_t iik = 0; iik < nx * (idx_t)cur_nprobe; iik++) {
                     try {
                         idx_t i = iik / (idx_t)cur_nprobe;
@@ -976,10 +977,10 @@ void IndexIVF::range_search_preassigned(
             if (parallel_mode == 0) {
                 pres.finalize();
             } else {
-#pragma omp barrier
-#pragma omp single
+// #pragma omp barrier
+// #pragma omp single
                 RangeSearchPartialResult::merge(all_pres, false);
-#pragma omp barrier
+// #pragma omp barrier
             }
         } catch (...) {
             omp_capture_exception(ex);
@@ -1150,7 +1151,7 @@ void IndexIVF::search_and_reconstruct(
             labels,
             true /* store_pairs */,
             params);
-#pragma omp parallel for if (n * k > 1000)
+// #pragma omp parallel for if (n * k > 1000)
     for (idx_t ij = 0; ij < n * k; ij++) {
         idx_t key = labels[ij];
         float* reconstructed = recons + ij * d;
@@ -1212,7 +1213,7 @@ void IndexIVF::search_and_return_codes(
         code_size_1 += coarse_code_size();
     }
 
-#pragma omp parallel for if (n * k > 1000)
+// #pragma omp parallel for if (n * k > 1000)
     for (idx_t ij = 0; ij < n * k; ij++) {
         idx_t key = labels[ij];
         uint8_t* code1 = codes + ij * code_size_1;
