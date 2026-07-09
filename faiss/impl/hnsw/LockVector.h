@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <omp.h>
-
 #include <faiss/impl/FaissAssert.h>
 
 namespace faiss {
@@ -42,21 +40,18 @@ class LockVector {
 
     void lock(size_t i) {
         FAISS_CHECK_RANGE_DEBUG(i, 0, size_);
-        omp_set_lock(&data_[i]);
     }
 
     void unlock(size_t i) {
         FAISS_CHECK_RANGE_DEBUG(i, 0, size_);
-        omp_unset_lock(&data_[i]);
     }
 
     bool try_lock(size_t i) {
         FAISS_CHECK_RANGE_DEBUG(i, 0, size_);
-        return omp_test_lock(&data_[i]);
+        return true;
     }
 
    private:
-    omp_lock_t* data_ = nullptr;
     size_t size_ = 0;
     size_t capacity_ = 0;
 };

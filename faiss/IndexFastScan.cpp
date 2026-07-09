@@ -7,7 +7,6 @@
 
 #include <faiss/IndexFastScan.h>
 
-#include <omp.h>
 #include <algorithm>
 #include <cstring>
 #include <memory>
@@ -320,12 +319,12 @@ void IndexFastScan::search_dispatch_implem(
         search_implem_234<Cfloat>(n, x, k, distances, labels, context);
     } else if (impl >= 12 && impl <= 15) {
         FAISS_THROW_IF_NOT(ntotal < INT_MAX);
-        int nt = std::min(omp_get_max_threads(), int(n));
+        int nt = std::min(1, int(n));
         // Fall back to single-threaded implementations when parallelization not
         // beneficial:
-        // - Single-core system (omp_get_max_threads() = 1)
+        // - Single-core system (1 = 1)
         // - Single query (n = 1)
-        // - OpenMP disabled (omp_get_max_threads() = 1)
+        // - OpenMP disabled (1 = 1)
         if (nt < 2) {
             if (impl == 12 || impl == 13) {
                 search_implem_12<C>(n, x, k, distances, labels, impl, context);
@@ -334,7 +333,7 @@ void IndexFastScan::search_dispatch_implem(
             }
         } else {
             // explicitly slice over threads
-#pragma omp parallel for num_threads(nt)
+// #pragma omp parallel for num_threads(nt)
             for (int slice = 0; slice < nt; slice++) {
                 idx_t i0 = n * slice / nt;
                 idx_t i1 = n * (slice + 1) / nt;
@@ -402,7 +401,7 @@ void IndexFastScan::search_implem_234(
         }
     }
 
-#pragma omp parallel for if (n > 1000)
+// #pragma omp parallel for if (n > 1000)
     for (int64_t i = 0; i < n; i++) {
         int64_t* heap_ids = labels + i * k;
         float* heap_dis = distances + i * k;

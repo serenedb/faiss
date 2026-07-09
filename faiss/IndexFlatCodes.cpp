@@ -208,7 +208,7 @@ struct Run_search_with_decompress {
         using DC = GenericFlatCodesDistanceComputer<VectorDistance>;
         std::exception_ptr ex;
         std::atomic<bool> interrupt{false};
-#pragma omp parallel // if (res.nq > 100)
+// #pragma omp parallel // if (res.nq > 100)
         {
             std::unique_ptr<DC> dc;
             std::unique_ptr<SingleResultHandler> resi;
@@ -218,7 +218,7 @@ struct Run_search_with_decompress {
             } catch (...) {
                 omp_capture_exception(ex, [&] { interrupt = true; });
             }
-#pragma omp for
+// #pragma omp for
             for (int64_t q = 0; q < static_cast<int64_t>(res.nq); q++) {
                 if (interrupt.load(std::memory_order_relaxed)) {
                     continue;

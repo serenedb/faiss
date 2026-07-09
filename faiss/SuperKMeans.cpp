@@ -166,7 +166,7 @@ double run_iter_pruned(
     // Refresh tau: exact full-d L2 distance to the currently assigned centroid.
     // super_kmeans_assign_iteration requires an exact tau (the chi-squared
     // bound assumes it), and centroids moved since the previous assignment.
-#pragma omp parallel for
+// #pragma omp parallel for
     for (int i = 0; i < n_train; ++i) {
         const int j_prev = state.assignments[i];
         const float* xrow = state.X_tilde.data() + static_cast<size_t>(i) * d;
@@ -625,8 +625,8 @@ void super_kmeans_assign_iteration(
                 [[maybe_unused]] const int omp_chunk_local = cp.omp_chunk;
                 int64_t tile_total = 0;
                 int64_t tile_pruned = 0;
-#pragma omp parallel for schedule(dynamic, omp_chunk_local) \
-        reduction(+ : tile_total) reduction(+ : tile_pruned)
+// #pragma omp parallel for schedule(dynamic, omp_chunk_local) \
+        // reduction(+ : tile_total) reduction(+ : tile_pruned)
                 for (int i = 0; i < bx; ++i) {
                     const float xnp_i = x_norms_partial[xi + i];
                     float tau_i = tau[xi + i];

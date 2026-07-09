@@ -496,6 +496,9 @@ void ProgressiveDimClustering::train(
         idx_t n,
         const float* x,
         ProgressiveDimIndexFactory& factory) {
+    FAISS_THROW_MSG(
+            "ProgressiveDimClustering disabled (VectorTransform not built)");
+#if 0
     int d_prev = 0;
 
     PCAMatrix pca(static_cast<int>(d), static_cast<int>(d));
@@ -552,6 +555,7 @@ void ProgressiveDimClustering::train(
         pca.reverse_transform(k, centroids.data(), cent_transformed.data());
         cent_transformed.swap(centroids);
     }
+#endif
 }
 
 } // namespace faiss

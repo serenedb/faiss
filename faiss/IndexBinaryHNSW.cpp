@@ -98,13 +98,13 @@ void IndexBinaryHNSW::search(
 
     size_t n1 = 0, n2 = 0, ndis = 0, nhops = 0;
 
-#pragma omp parallel
+// #pragma omp parallel
     {
         std::unique_ptr<VisitedTable> vt = VisitedTable::create(ntotal);
         std::unique_ptr<DistanceComputer> dis(get_distance_computer());
         RH::SingleResultHandler res(bres);
 
-#pragma omp for reduction(+ : n1, n2, ndis, nhops)
+// #pragma omp for reduction(+ : n1, n2, ndis, nhops)
         for (idx_t i = 0; i < n; i++) {
             res.begin(i);
             dis->set_query((float*)(x + i * code_size));
@@ -123,7 +123,7 @@ void IndexBinaryHNSW::search(
 
     hnsw_stats.combine({n1, n2, ndis, nhops});
 
-#pragma omp parallel for
+// #pragma omp parallel for
     for (idx_t i = 0; i < n * k; ++i) {
         distances[i] = std::round(distances_f[i]);
     }
@@ -220,7 +220,7 @@ void IndexBinaryHNSWCagra::search(
         std::vector<storage_idx_t> nearest(n);
         std::vector<float> nearest_d(n);
 
-#pragma omp parallel for
+// #pragma omp parallel for
         for (idx_t i = 0; i < n; i++) {
             std::unique_ptr<DistanceComputer> dis(get_distance_computer());
             dis->set_query((float*)(x + i * code_size));
@@ -245,14 +245,14 @@ void IndexBinaryHNSWCagra::search(
                     nearest[i] >= 0, "Could not find a valid entrypoint.");
         }
 
-#pragma omp parallel
+// #pragma omp parallel
         {
             std::unique_ptr<VisitedTable> vt = VisitedTable::create(ntotal);
             std::unique_ptr<DistanceComputer> dis(get_distance_computer());
             HNSWStats search_stats;
             RH::SingleResultHandler res(bres);
 
-#pragma omp for
+// #pragma omp for
             for (idx_t i = 0; i < n; i++) {
                 res.begin(i);
                 dis->set_query((float*)(x + i * code_size));
@@ -270,13 +270,13 @@ void IndexBinaryHNSWCagra::search(
 
                 res.end();
             }
-#pragma omp critical
+// #pragma omp critical
             {
                 hnsw_stats.combine(search_stats);
             }
         }
 
-#pragma omp parallel for
+// #pragma omp parallel for
         for (idx_t i = 0; i < n * k; ++i) {
             distances[i] = std::round(distances_f[i]);
         }

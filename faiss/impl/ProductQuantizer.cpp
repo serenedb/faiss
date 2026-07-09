@@ -326,7 +326,7 @@ void ProductQuantizer::decode(const uint8_t* code, float* x) const {
 
 void ProductQuantizer::decode(const uint8_t* code, float* x, size_t n) const {
     int64_t n_signed = n;
-#pragma omp parallel for if (n > 100)
+// #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < n_signed; i++) {
         this->decode(code + code_size * i, x + d * i);
     }
@@ -423,7 +423,7 @@ void ProductQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
     int64_t n_signed = n;
     if (dsub < 16) { // simple direct computation
 
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t i = 0; i < n_signed; i++)
             compute_code(x + i * d, codes + i * code_size);
 
@@ -431,7 +431,7 @@ void ProductQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
         std::unique_ptr<float[]> dis_tables(new float[n * ksub * M]);
         compute_distance_tables(n, x, dis_tables.get());
 
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t i = 0; i < n_signed; i++) {
             uint8_t* code = codes + i * code_size;
             const float* tab = dis_tables.get() + i * ksub * M;
@@ -497,7 +497,7 @@ void ProductQuantizer::compute_distance_tables(
 #endif
             if (dsub < 16) {
 
-#pragma omp parallel for if (nx > 1)
+// #pragma omp parallel for if (nx > 1)
         for (int64_t i = 0; i < nx_signed; i++) {
             compute_distance_table(x + i * d, dis_tables + i * ksub * M);
         }
@@ -532,7 +532,7 @@ void ProductQuantizer::compute_inner_prod_tables(
 #endif
             if (dsub < 16) {
 
-#pragma omp parallel for if (nx > 1)
+// #pragma omp parallel for if (nx > 1)
         for (int64_t i = 0; i < nx_signed; i++) {
             compute_inner_prod_table(x + i * d, dis_tables + i * ksub * M);
         }
@@ -707,7 +707,7 @@ void pq_knn_search_with_tables(
     int64_t nx_signed = nx;
     size_t ksub = pq.ksub, M = pq.M;
 
-#pragma omp parallel for if (nx > 1)
+// #pragma omp parallel for if (nx > 1)
     for (int64_t i = 0; i < nx_signed; i++) {
         /* query preparation for asymmetric search: compute look-up tables */
         const float* dis_table = dis_tables + i * ksub * M;
@@ -825,7 +825,7 @@ void ProductQuantizer::compute_sdc_table() {
 
     if (dsub < 4) {
         with_simd_level_with_sve([&]<SIMDLevel SL>() {
-#pragma omp parallel for
+// #pragma omp parallel for
             for (int64_t mk = 0; mk < static_cast<int64_t>(M * ksub); mk++) {
                 // allow omp to schedule in a more fine-grained way
                 // `collapse` is not supported in OpenMP 2.x
@@ -840,7 +840,7 @@ void ProductQuantizer::compute_sdc_table() {
     } else {
         // NOTE: it would disable the omp loop in pairwise_L2sqr
         // but still accelerate especially when M >= 4
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t m = 0; m < static_cast<int64_t>(M); m++) {
             const float* cents = centroids.data() + m * ksub * dsub;
             float* dis_tab = sdc_table.data() + m * ksub * ksub;
@@ -862,11 +862,11 @@ void ProductQuantizer::search_sdc(
     size_t k = res->k;
     int64_t nq_signed = nq;
 
-#pragma omp parallel
+// #pragma omp parallel
     {
         // One allocation per OMP thread instead of one per query.
         std::vector<const float*> q_row(M);
-#pragma omp for
+// #pragma omp for
         for (int64_t i = 0; i < nq_signed; i++) {
             idx_t* heap_ids = res->ids + i * k;
             float* heap_dis = res->val + i * k;

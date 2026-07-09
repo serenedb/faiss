@@ -646,6 +646,17 @@ ScalarQuantizer::SQuantizer* ScalarQuantizer::select_quantizer() const {
     // A SIMD level's factory returns nullptr when the dimension is
     // incompatible (e.g. AVX-512 needs d % 16 == 0); the dispatcher then falls
     // back to the next-lower level (AVX-512 -> AVX2 -> scalar).
+    // IndexIVFScalarQuantizer is compiled out of this build, so this
+    // scanner has no caller. The dispatch below is unreachable and kept
+    // only so the file keeps type-checking against upstream's API.
+    (void)mt;
+    (void)quantizer;
+    (void)store_pairs;
+    (void)sel;
+    (void)by_residual;
+    FAISS_THROW_MSG(
+            "ScalarQuantizer::select_InvertedListScanner: "
+            "IndexIVFScalarQuantizer disabled");
     return with_simd_level_fallback<AVAILABLE_SIMD_LEVELS_BASE_WITH_SPR>(
             [&]<SIMDLevel SL>() -> SQuantizer* {
                 return scalar_quantizer::sq_select_quantizer<SL>(
@@ -661,7 +672,7 @@ void ScalarQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
     std::unique_ptr<SQuantizer> squant(select_quantizer());
 
     memset(codes, 0, code_size * n);
-#pragma omp parallel for if (n > 100)
+// #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         squant->encode_vector(x + i * d, codes + i * code_size);
     }
@@ -674,7 +685,7 @@ void ScalarQuantizer::decode(const uint8_t* codes, float* x, size_t n) const {
     }
     std::unique_ptr<SQuantizer> squant(select_quantizer());
 
-#pragma omp parallel for if (n > 100)
+// #pragma omp parallel for if (n > 100)
     for (int64_t i = 0; i < static_cast<int64_t>(n); i++) {
         squant->decode_vector(codes + i * code_size, x + i * d);
     }
