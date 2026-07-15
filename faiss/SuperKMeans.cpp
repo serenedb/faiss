@@ -220,19 +220,30 @@ double run_iter_pruned(
         for (int yj = 0; yj < k; yj += cp.y_batch) {
             const int by = std::min(cp.y_batch, k - yj);
 
-            // GEMM phase (no BLAS in this fork): scalar dot products
+            // GEMM phase: column-major sgemm computes
             //   partial_ip[i*by + j] = <X[xi+i, 0:dp], Y[yj+j, 0:dp]>.
             {
-                for (int i = 0; i < bx; ++i) {
-                    const float* xrow = state.X_tilde.data() +
-                            static_cast<size_t>(xi + i) * d;
-                    for (int j = 0; j < by; ++j) {
-                        const float* yrow = state.Y_tilde.data() +
-                                static_cast<size_t>(yj + j) * d;
-                        scratch.partial_ip[static_cast<size_t>(i) * by + j] =
-                                fvec_inner_product(xrow, yrow, dp);
-                    }
-                }
+                FINTEGER M = by;
+                FINTEGER N_ = bx;
+                FINTEGER K_ = dp;
+                float alpha = 1.0f;
+                float beta = 0.0f;
+                FINTEGER lda_y = d;
+                FINTEGER lda_x = d;
+                FINTEGER ldc = by;
+                sgemm_("Transpose",
+                       "Not transpose",
+                       &M,
+                       &N_,
+                       &K_,
+                       &alpha,
+                       state.Y_tilde.data() + static_cast<size_t>(yj) * d,
+                       &lda_y,
+                       state.X_tilde.data() + static_cast<size_t>(xi) * d,
+                       &lda_x,
+                       &beta,
+                       scratch.partial_ip.data(),
+                       &ldc);
             }
 
             // One SIMD dispatch per (xi, yj) tile — block_l2<SL> below is
