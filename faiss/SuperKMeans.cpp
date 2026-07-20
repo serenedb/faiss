@@ -445,7 +445,13 @@ std::unique_ptr<uint8_t[]> setup_train_state(
             "SuperKMeans: training set size exceeds INT_MAX after sampling");
     state.n = static_cast<int>(nx);
 
-    state.R.init(cp.seed);
+    if (cp.rotation != nullptr) {
+        state.R.A.assign(cp.rotation, cp.rotation + static_cast<size_t>(d) * d);
+        state.R.is_orthonormal = true;
+        state.R.is_trained = true;
+    } else {
+        state.R.init(cp.seed);
+    }
 
     state.X_tilde.resize(static_cast<size_t>(state.n) * d);
     state.R.apply_noalloc(state.n, x_sampled, state.X_tilde.data());

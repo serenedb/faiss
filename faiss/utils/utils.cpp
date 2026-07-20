@@ -270,73 +270,116 @@ inline float& MatAt(float* a, int lda, int i, int j) {
 void matrix_qr(int m, int n, float* a) {
     FAISS_THROW_IF_NOT(m >= n);
     const int lda = m;
+    constexpr int NB = 32;
     std::vector<float> tau(n, 0.0f);
 
-    // Reduce `a` to upper-triangular R in place, storing each
-    // reflector's sub-diagonal part back into the zeroed-out entries of
-    // its column (mirrors LAPACK's packed sgeqrf_ output).
-    for (int k = 0; k < n; ++k) {
-        float alpha = MatAt(a, lda, k, k);
-        float xnorm2 = 0.0f;
-        for (int i = k + 1; i < m; ++i) {
-            float v = MatAt(a, lda, i, k);
-            xnorm2 += v * v;
-        }
-        if (xnorm2 == 0.0f) {
-            continue; // column already reduced; tau[k] stays 0
-        }
-        const float norm_x = std::sqrt(alpha * alpha + xnorm2);
-        const float beta = (alpha >= 0.0f) ? -norm_x : norm_x;
-        const float tau_k = (beta - alpha) / beta;
-        const float inv = 1.0f / (alpha - beta);
-        for (int i = k + 1; i < m; ++i) {
-            MatAt(a, lda, i, k) *= inv;
-        }
-        MatAt(a, lda, k, k) = beta;
-        tau[k] = tau_k;
+    auto gemm = [](const char* ta, const char* tb, int M, int N, int K,
+                   float alpha, const float* A, int ldA, const float* B,
+                   int ldB, float beta, float* C, int ldC) {
+        FINTEGER mm = M, nn = N, kk = K, la = ldA, lb = ldB, lc = ldC;
+        sgemm_(ta, tb, &mm, &nn, &kk, &alpha, A, &la, B, &lb, &beta, C, &lc);
+    };
 
-        // Apply the reflector to the trailing columns: col -= tau_k * v
-        // * (v^T . col), with v = [1, a[k+1:m, k]].
-        for (int j = k + 1; j < n; ++j) {
-            float dot = MatAt(a, lda, k, j);
-            for (int i = k + 1; i < m; ++i) {
-                dot += MatAt(a, lda, i, k) * MatAt(a, lda, i, j);
+    std::vector<float> Vp, G(static_cast<size_t>(NB) * NB),
+            T(static_cast<size_t>(NB) * NB), W, TW;
+
+    auto build_vt = [&](int kb, int ib) {
+        const int rows = m - kb;
+        Vp.assign(static_cast<size_t>(rows) * ib, 0.0f);
+        for (int c = 0; c < ib; ++c) {
+            Vp[c + static_cast<size_t>(c) * rows] = 1.0f;
+            for (int r = c + 1; r < rows; ++r) {
+                Vp[r + static_cast<size_t>(c) * rows] =
+                        MatAt(a, lda, kb + r, kb + c);
             }
-            const float f = tau_k * dot;
-            MatAt(a, lda, k, j) -= f;
-            for (int i = k + 1; i < m; ++i) {
-                MatAt(a, lda, i, j) -= f * MatAt(a, lda, i, k);
+        }
+        gemm("T", "N", ib, ib, rows, 1.0f, Vp.data(), rows, Vp.data(), rows,
+             0.0f, G.data(), ib);
+        std::fill(T.begin(), T.begin() + static_cast<size_t>(ib) * ib, 0.0f);
+        for (int c = 0; c < ib; ++c) {
+            const float tc = tau[kb + c];
+            T[c + static_cast<size_t>(c) * ib] = tc;
+            if (c > 0 && tc != 0.0f) {
+                for (int r = 0; r < c; ++r) {
+                    float acc = 0.0f;
+                    for (int s = r; s < c; ++s) {
+                        acc += T[r + static_cast<size_t>(s) * ib] *
+                                (-tc * G[s + static_cast<size_t>(c) * ib]);
+                    }
+                    T[r + static_cast<size_t>(c) * ib] = acc;
+                }
             }
+        }
+    };
+
+    for (int kb = 0; kb < n; kb += NB) {
+        const int ib = std::min(NB, n - kb);
+        for (int k = kb; k < kb + ib; ++k) {
+            float alpha = MatAt(a, lda, k, k);
+            float xnorm2 = 0.0f;
+            for (int i = k + 1; i < m; ++i) {
+                float v = MatAt(a, lda, i, k);
+                xnorm2 += v * v;
+            }
+            if (xnorm2 == 0.0f) {
+                continue;
+            }
+            const float norm_x = std::sqrt(alpha * alpha + xnorm2);
+            const float beta = (alpha >= 0.0f) ? -norm_x : norm_x;
+            tau[k] = (beta - alpha) / beta;
+            const float inv = 1.0f / (alpha - beta);
+            for (int i = k + 1; i < m; ++i) {
+                MatAt(a, lda, i, k) *= inv;
+            }
+            MatAt(a, lda, k, k) = beta;
+            for (int j = k + 1; j < kb + ib; ++j) {
+                float dot = MatAt(a, lda, k, j);
+                for (int i = k + 1; i < m; ++i) {
+                    dot += MatAt(a, lda, i, k) * MatAt(a, lda, i, j);
+                }
+                const float f = tau[k] * dot;
+                MatAt(a, lda, k, j) -= f;
+                for (int i = k + 1; i < m; ++i) {
+                    MatAt(a, lda, i, j) -= f * MatAt(a, lda, i, k);
+                }
+            }
+        }
+        const int ncol = n - (kb + ib);
+        if (ncol > 0) {
+            const int rows = m - kb;
+            build_vt(kb, ib);
+            float* C = a + kb + static_cast<size_t>(kb + ib) * lda;
+            W.assign(static_cast<size_t>(ib) * ncol, 0.0f);
+            TW.assign(static_cast<size_t>(ib) * ncol, 0.0f);
+            gemm("T", "N", ib, ncol, rows, 1.0f, Vp.data(), rows, C, lda, 0.0f,
+                 W.data(), ib);
+            gemm("T", "N", ib, ncol, ib, 1.0f, T.data(), ib, W.data(), ib, 0.0f,
+                 TW.data(), ib);
+            gemm("N", "N", rows, ncol, ib, -1.0f, Vp.data(), rows, TW.data(), ib,
+                 1.0f, C, lda);
         }
     }
 
-    // Form the explicit m x n Q = H_0 H_1 ... H_{n-1} by applying the
-    // reflectors, in reverse order, to the leading n columns of I_m.
-    std::vector<float> q(static_cast<size_t>(m) * n, 0.0f);
+    std::vector<float> Q(static_cast<size_t>(m) * n, 0.0f);
     for (int j = 0; j < n; ++j) {
-        q[j + static_cast<size_t>(j) * m] = 1.0f;
+        Q[j + static_cast<size_t>(j) * m] = 1.0f;
     }
-    std::vector<float> v(m);
-    for (int k = n - 1; k >= 0; --k) {
-        if (tau[k] == 0.0f) {
-            continue;
-        }
-        v[k] = 1.0f;
-        for (int i = k + 1; i < m; ++i) {
-            v[i] = MatAt(a, lda, i, k);
-        }
-        for (int j = 0; j < n; ++j) {
-            float dot = 0.0f;
-            for (int i = k; i < m; ++i) {
-                dot += v[i] * q[i + static_cast<size_t>(j) * m];
-            }
-            const float f = tau[k] * dot;
-            for (int i = k; i < m; ++i) {
-                q[i + static_cast<size_t>(j) * m] -= f * v[i];
-            }
-        }
+    const int last_kb = ((n - 1) / NB) * NB;
+    for (int kb = last_kb; kb >= 0; kb -= NB) {
+        const int ib = std::min(NB, n - kb);
+        const int rows = m - kb;
+        build_vt(kb, ib);
+        float* Qsub = Q.data() + kb;
+        W.assign(static_cast<size_t>(ib) * n, 0.0f);
+        TW.assign(static_cast<size_t>(ib) * n, 0.0f);
+        gemm("T", "N", ib, n, rows, 1.0f, Vp.data(), rows, Qsub, m, 0.0f,
+             W.data(), ib);
+        gemm("N", "N", ib, n, ib, 1.0f, T.data(), ib, W.data(), ib, 0.0f,
+             TW.data(), ib);
+        gemm("N", "N", rows, n, ib, -1.0f, Vp.data(), rows, TW.data(), ib, 1.0f,
+             Qsub, m);
     }
-    std::copy(q.begin(), q.end(), a);
+    std::copy(Q.begin(), Q.end(), a);
 }
 
 /***************************************************************************
