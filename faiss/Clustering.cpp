@@ -110,7 +110,8 @@ void Clustering::train_encoded(
         x = x_new;
         del3.reset(weights_new);
         weights = weights_new;
-    } else if (static_cast<size_t>(nx) < k * min_points_per_centroid) {
+    } else if (verbose &&
+               static_cast<size_t>(nx) < k * min_points_per_centroid) {
         fprintf(stderr,
                 "WARNING clustering %" PRId64
                 " points to %zd centroids: "
