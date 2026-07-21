@@ -385,7 +385,6 @@ void exhaustive_inner_product_blas(
             }
             /* compute the actual dot products */
             {
-#if 0
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
                 sgemm_("Transpose",
@@ -401,14 +400,6 @@ void exhaustive_inner_product_blas(
                        &zero,
                        ip_block.get(),
                        &nyi);
-#else
-                for (int64_t bi = i0; bi < (int64_t)i1; bi++) {
-                    for (size_t bj = j0; bj < j1; bj++) {
-                        ip_block[(bi - i0) * (j1 - j0) + (bj - j0)] =
-                                fvec_inner_product(x + bi * d, y + bj * d, d);
-                    }
-                }
-#endif
             }
 
             res.add_results(j0, j1, ip_block.get());
@@ -466,7 +457,6 @@ void exhaustive_L2sqr_blas_default_impl(
             }
             /* compute the actual dot products */
             {
-#if 0
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
                 sgemm_("Transpose",
@@ -482,14 +472,6 @@ void exhaustive_L2sqr_blas_default_impl(
                        &zero,
                        ip_block.get(),
                        &nyi);
-#else
-                for (int64_t bi = i0; bi < (int64_t)i1; bi++) {
-                    for (size_t bj = j0; bj < j1; bj++) {
-                        ip_block[(bi - i0) * (j1 - j0) + (bj - j0)] =
-                                fvec_inner_product(x + bi * d, y + bj * d, d);
-                    }
-                }
-#endif
             }
             for (size_t i = i0; i < i1; i++) {
                 float* ip_line = ip_block.get() + (i - i0) * (j1 - j0);

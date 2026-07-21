@@ -58,6 +58,8 @@ struct SuperKMeansParameters : public ClusteringParameters {
 
     /// OpenMP dynamic-schedule chunk size for the pruning loop.
     int omp_chunk = 8;
+
+    const float* rotation = nullptr;
 };
 
 /** Drop-in faster k-means: same interface as faiss::Clustering. Per iteration:

@@ -702,29 +702,19 @@ endif()
 # target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
 # target_link_libraries(faiss_sve PRIVATE OpenMP::OpenMP_CXX)
 
-# if(FAISS_ENABLE_MKL)
-#   find_package(MKL REQUIRED)
-# endif()
-# if(MKL_FOUND)
-#   target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
-#   target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
-#   target_link_libraries(faiss_avx512 PRIVATE ${MKL_LIBRARIES})
-#   target_link_libraries(faiss_avx512_spr PRIVATE ${MKL_LIBRARIES})
-# else()
-#   find_package(BLAS REQUIRED)
-#   target_link_libraries(faiss PRIVATE ${BLAS_LIBRARIES})
-#   target_link_libraries(faiss_avx2 PRIVATE ${BLAS_LIBRARIES})
-#   target_link_libraries(faiss_avx512 PRIVATE ${BLAS_LIBRARIES})
-#   target_link_libraries(faiss_avx512_spr PRIVATE ${BLAS_LIBRARIES})
-#   target_link_libraries(faiss_sve PRIVATE ${BLAS_LIBRARIES})
-
-#   find_package(LAPACK REQUIRED)
-#   target_link_libraries(faiss PRIVATE ${LAPACK_LIBRARIES})
-#   target_link_libraries(faiss_avx2 PRIVATE ${LAPACK_LIBRARIES})
-#   target_link_libraries(faiss_avx512 PRIVATE ${LAPACK_LIBRARIES})
-#   target_link_libraries(faiss_avx512_spr PRIVATE ${LAPACK_LIBRARIES})
-#   target_link_libraries(faiss_sve PRIVATE ${LAPACK_LIBRARIES})
-# endif()
+# BLAS linked via the sdb::blas alias (vendored/discovered once in the
+# top-level third_party/CMakeLists.txt) instead of faiss's own upstream
+# find_package(MKL)/find_package(BLAS) -- diverges from upstream faiss,
+# future merge-conflict risk on faiss version bumps. LAPACK intentionally
+# not linked: faiss's only LAPACK callers (PCAMatrix/OPQMatrix SVD in
+# VectorTransform.cpp) are dead code in this build -- serenedb never
+# references VectorTransform/PCAMatrix/OPQMatrix, confirmed empirically (no
+# ssyev_/sgesvd_/dgesvd_ symbols in the built serened binary).
+target_link_libraries(faiss PRIVATE sdb::blas)
+target_link_libraries(faiss_avx2 PRIVATE sdb::blas)
+target_link_libraries(faiss_avx512 PRIVATE sdb::blas)
+target_link_libraries(faiss_avx512_spr PRIVATE sdb::blas)
+target_link_libraries(faiss_sve PRIVATE sdb::blas)
 
 install(TARGETS faiss
   EXPORT faiss-targets

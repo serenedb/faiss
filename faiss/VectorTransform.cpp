@@ -190,15 +190,21 @@ void LinearTransform::apply_noalloc(idx_t n, const float* x, float* xt) const {
             A.size() == static_cast<size_t>(d_out) * d_in,
             "Transformation matrix not initialized");
 
-    // No BLAS in this fork: xt[i] = c_factor * xt[i] + A * x[i].
-    for (idx_t i = 0; i < n; i++) {
-        const float* xi = x + i * d_in;
-        float* xoi = xt + i * d_out;
-        for (int r = 0; r < d_out; r++) {
-            const float bias = (c_factor != 0.0f) ? xoi[r] : 0.0f;
-            xoi[r] = bias + fvec_inner_product(A.data() + r * d_in, xi, d_in);
-        }
-    }
+    float one = 1;
+    FINTEGER nbiti = d_out, ni = static_cast<FINTEGER>(n), di = d_in;
+    sgemm_("Transposed",
+           "Not transposed",
+           &nbiti,
+           &ni,
+           &di,
+           &one,
+           A.data(),
+           &di,
+           x,
+           &di,
+           &c_factor,
+           xt,
+           &nbiti);
 }
 
 void LinearTransform::transform_transpose(idx_t n, const float* y, float* x)
@@ -216,18 +222,22 @@ void LinearTransform::transform_transpose(idx_t n, const float* y, float* x)
         y = y_bias_corrected.data();
     }
 
-    // No BLAS in this fork: x[i] = A^T * y[i].
-    for (idx_t i = 0; i < n; i++) {
-        const float* yi = y + i * d_out;
-        float* xoi = x + i * d_in;
-        std::fill(xoi, xoi + d_in, 0.0f);
-        for (int r = 0; r < d_out; r++) {
-            const float yr = yi[r];
-            const float* arow = A.data() + static_cast<size_t>(r) * d_in;
-            for (int c = 0; c < d_in; c++) {
-                xoi[c] += yr * arow[c];
-            }
-        }
+    {
+        FINTEGER dii = d_in, doi = d_out, ni = static_cast<FINTEGER>(n);
+        float one = 1.0, zero = 0.0;
+        sgemm_("Not",
+               "Not",
+               &dii,
+               &ni,
+               &doi,
+               &one,
+               A.data(),
+               &dii,
+               y,
+               &doi,
+               &zero,
+               x,
+               &dii);
     }
 }
 
