@@ -77,17 +77,8 @@ struct TrainState {
     int low_pruning_streak = 0;
     bool low_pruning_warning_printed = false;
 
-    explicit TrainState(int d, bool spherical)
-            : R([d, spherical]() -> std::unique_ptr<faiss::VectorTransform> {
-                  // Spherical (inner-product) clustering only: a power-of-two
-                  // dimension can use the fast Hadamard rotation instead of
-                  // the generic random rotation. L2 training keeps the
-                  // original RandomRotationMatrix path unchanged.
-                  if (spherical && d > 0 && (d & (d - 1)) == 0) {
-                      return std::make_unique<faiss::HadamardRotation>(d);
-                  }
-                  return std::make_unique<faiss::RandomRotationMatrix>(d, d);
-              }()) {}
+    explicit TrainState(int d)
+            : R(std::make_unique<faiss::RandomRotationMatrix>(d, d)) {}
 };
 
 /// PDX block layout for the trailing pruning sweep: block b covers original
@@ -307,8 +298,12 @@ void setup_train_state(
             "SuperKMeans: training set size exceeds INT_MAX after sampling");
     state.n = static_cast<int>(nx);
 
-    if (auto* R = dynamic_cast<HadamardRotation*>(state.R.get())) {
-        R->init(cp.seed);
+    if (cp.rotation != nullptr) {
+        auto R = std::make_unique<RandomRotationMatrix>(d, d);
+        R->A.assign(cp.rotation, cp.rotation + static_cast<size_t>(d) * d);
+        R->is_orthonormal = true;
+        R->is_trained = true;
+        state.R = std::move(R);
     } else {
         auto* dense_rotation =
                 dynamic_cast<RandomRotationMatrix*>(state.R.get());
@@ -473,7 +468,7 @@ void SuperKMeans::train_ex(idx_t n, const void* x, NumericType numeric_type) {
                static_cast<idx_t>(k) * cp.min_points_per_centroid);
     }
 
-    TrainState state(d, cp.spherical);
+    TrainState state(d);
     std::vector<int64_t> labels64;
     SuperKMeansAssignScratch assign_scratch;
     std::vector<float> hassign;
@@ -666,8 +661,8 @@ void super_kmeans_assign_iteration(
                 [[maybe_unused]] const int omp_chunk_local = cp.omp_chunk;
                 int64_t tile_total = 0;
                 int64_t tile_pruned = 0;
-// #pragma omp parallel for schedule(dynamic, omp_chunk_local) \
-        // reduction(+ : tile_total) reduction(+ : tile_pruned)
+// #pragma omp parallel for schedule(dynamic, omp_chunk_local)
+                // reduction(+ : tile_total) reduction(+ : tile_pruned)
                 for (int i = 0; i < bx; ++i) {
                     const float xnp_i = x_norms_partial[xi + i];
                     float tau_i = tau[xi + i];
