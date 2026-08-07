@@ -15,6 +15,10 @@
 #include <cstring>
 #include <memory>
 
+#include <algorithm>
+#include <limits>
+#include <vector>
+
 #include <faiss/IndexPQ.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/utils/distances.h>
@@ -51,12 +55,12 @@ int sgemv_(
         const char* trans,
         FINTEGER* m,
         FINTEGER* n,
-        float* alpha,
+        const float* alpha,
         const float* a,
         FINTEGER* lda,
         const float* x,
         FINTEGER* incx,
-        float* beta,
+        const float* beta,
         float* y,
         FINTEGER* incy);
 
@@ -205,25 +209,6 @@ void LinearTransform::apply_noalloc(idx_t n, const float* x, float* xt) const {
 
     float one = 1;
     FINTEGER nbiti = d_out, ni = static_cast<FINTEGER>(n), di = d_in;
-    if (n == 1) {
-        FINTEGER onei = 1;
-        // Avoid GEMM packing overhead for single-vector transforms. GEMV is
-        // mathematically equivalent but may not be bit-exact with GEMM because
-        // BLAS implementations can use different accumulation orders.
-        sgemv_("Transposed",
-               &di,
-               &nbiti,
-               &one,
-               A.data(),
-               &di,
-               x,
-               &onei,
-               &c_factor,
-               xt,
-               &onei);
-        return;
-    }
-
     sgemm_("Transposed",
            "Not transposed",
            &nbiti,
@@ -274,6 +259,8 @@ void LinearTransform::transform_transpose(idx_t n, const float* y, float* x)
 }
 
 void LinearTransform::set_is_orthonormal() {
+    FAISS_THROW_MSG("LinearTransform::set_is_orthonormal: unused, disabled");
+#if 0
     if (d_out > d_in) {
         // not clear what we should do in this case
         is_orthonormal = false;
@@ -318,6 +305,7 @@ void LinearTransform::set_is_orthonormal() {
             }
         }
     }
+#endif
 }
 
 void LinearTransform::reverse_transform(idx_t n, const float* xt, float* x)
@@ -393,6 +381,15 @@ void RandomRotationMatrix::train(idx_t /*n*/, const float* /*x*/) {
     // initialize with some arbitrary seed
     init(12345);
 }
+
+/*********************************************
+ * HadamardRotation, PCAMatrix, ITQMatrix/ITQTransform, OPQMatrix,
+ * NormalizationTransform, CenteringTransform, RemapDimensionsTransform:
+ * unused by serenedb (only RandomRotationMatrix is), and each needs its
+ * own BLAS/LAPACK stubbing (sgemm_/ssyev_/sgesvd_/etc) to link in this
+ * fork. Disabled wholesale rather than stubbed piecemeal.
+ *********************************************/
+#if 0
 
 /*********************************************
  * HadamardRotation
@@ -481,7 +478,7 @@ void HadamardRotation::apply_noalloc(idx_t n, const float* x, float* xt) const {
     // Three rounds scale by p^(3/2). Normalize once at the end.
     float total_scale = 1.0f / (p * std::sqrt(static_cast<float>(p)));
 
-// #pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
     for (idx_t i = 0; i < n; i++) {
         const float* xi = x + i * d;
         float* xo = xt + i * p;
@@ -513,44 +510,6 @@ void HadamardRotation::apply_noalloc(idx_t n, const float* x, float* xt) const {
     }
 }
 
-void HadamardRotation::reverse_transform(idx_t n, const float* xt, float* x)
-        const {
-    FAISS_THROW_IF_NOT_MSG(is_trained, "Transformation not trained yet");
-    FAISS_THROW_IF_NOT_MSG(
-            d_in == d_out,
-            "HadamardRotation inverse requires equal input/output dimensions");
-
-    const size_t p = d_out;
-    // Reverse of apply_noalloc: three unnormalized FWHT rounds scale norms
-    // by (sqrt(p))^3 = p*sqrt(p); the forward pass cancels this with
-    // total_scale = 1/(p*sqrt(p)), so the inverse applies the same factor.
-    const float inverse_scale = 1.0f / (p * std::sqrt(static_cast<float>(p)));
-
-// #pragma omp parallel for schedule(dynamic)
-    for (idx_t i = 0; i < n; i++) {
-        const float* xi = xt + i * p;
-        float* xo = x + i * p;
-
-        // The inverse reverses the three sign-flip/Hadamard factors.
-        std::memcpy(xo, xi, p * sizeof(float));
-        fwht_inplace(xo, p);
-
-        for (size_t j = 0; j < p; j++) {
-            xo[j] *= signs3[j];
-        }
-        fwht_inplace(xo, p);
-
-        for (size_t j = 0; j < p; j++) {
-            xo[j] *= signs2[j];
-        }
-        fwht_inplace(xo, p);
-
-        for (size_t j = 0; j < p; j++) {
-            xo[j] *= signs1[j] * inverse_scale;
-        }
-    }
-}
-
 void HadamardRotation::check_identical(const VectorTransform& other) const {
     auto* hr = dynamic_cast<const HadamardRotation*>(&other);
     FAISS_THROW_IF_NOT_MSG(hr, "failed to cast to HadamardRotation");
@@ -562,6 +521,8 @@ void HadamardRotation::check_identical(const VectorTransform& other) const {
     FAISS_THROW_IF_NOT_MSG(
             seed == hr->seed, "HadamardRotation seeds must match");
 }
+
+#endif
 
 /*********************************************
  * PCAMatrix
@@ -583,64 +544,232 @@ PCAMatrix::PCAMatrix(
 
 namespace {
 
-/// Compute the eigenvalue decomposition of symmetric matrix cov,
-/// dimensions d_in-by-d_in. Output eigenvectors in cov.
-
-void eig(size_t d_in, double* cov, double* eigenvalues, int verbose) {
-    { // compute eigenvalues and vectors
-        FINTEGER info = 0, lwork = -1, di = static_cast<FINTEGER>(d_in);
-        double workq;
-
-        dsyev_("Vectors as well",
-               "Upper",
-               &di,
-               cov,
-               &di,
-               eigenvalues,
-               &workq,
-               &lwork,
-               &info);
-        lwork = static_cast<FINTEGER>(workq);
-        std::vector<double> work(lwork);
-
-        dsyev_("Vectors as well",
-               "Upper",
-               &di,
-               cov,
-               &di,
-               eigenvalues,
-               work.data(),
-               &lwork,
-               &info);
-
-        if (info != 0) {
-            fprintf(stderr,
-                    "WARN ssyev info returns %d, "
-                    "a very bad PCA matrix is learnt\n",
-                    int(info));
-            // do not throw exception, as the matrix could still be useful
+/// Scalar implicit-QL with shifts (EISPACK/JAMA tql2), 0-indexed. Diagonalizes
+/// a symmetric tridiagonal matrix given by diagonal `dg[0..n-1]` and
+/// subdiagonal `sub`, where on input `sub[i]` couples `dg[i-1]` and `dg[i]`
+/// (`sub[0]` unused). `z` is the accumulated orthogonal transform from the
+/// Householder reduction, column-major (`z[row + col*n]`); on return column `j`
+/// of `z` is the eigenvector for `dg[j]`. Eigenpairs come out ascending. There
+/// is no BLAS-3 form for the QL sweep, so it stays scalar.
+void tql2_blas(size_t n, float* dg, float* sub, float* z) {
+    auto Z = [&](size_t r, size_t c) -> float& { return z[r + c * n]; };
+    for (size_t i = 1; i < n; i++) {
+        sub[i - 1] = sub[i]; // shift so sub[i] couples dg[i] and dg[i+1]
+    }
+    sub[n - 1] = 0.0f;
+    const float eps = std::numeric_limits<float>::epsilon();
+    float f = 0.0f, tst1 = 0.0f;
+    for (size_t l = 0; l < n; l++) {
+        tst1 = std::max(tst1, std::fabs(dg[l]) + std::fabs(sub[l]));
+        size_t m = l;
+        while (m < n && std::fabs(sub[m]) > eps * tst1) {
+            m++;
         }
-
-        if (verbose && d_in <= 10) {
-            printf("info=%ld new eigvals=[", long(info));
-            for (size_t j = 0; j < d_in; j++) {
-                printf("%g ", eigenvalues[j]);
-            }
-            printf("]\n");
-
-            double* ci = cov;
-            printf("eigenvecs=\n");
-            for (size_t i = 0; i < d_in; i++) {
-                for (size_t j = 0; j < d_in; j++) {
-                    printf("%10.4g ", *ci++);
+        if (m > l) {
+            do {
+                float g = dg[l];
+                float p = (dg[l + 1] - g) / (2.0f * sub[l]);
+                float r = std::hypot(p, 1.0f);
+                if (p < 0) {
+                    r = -r;
                 }
-                printf("\n");
+                dg[l] = sub[l] / (p + r);
+                dg[l + 1] = sub[l] * (p + r);
+                float dl1 = dg[l + 1];
+                float h = g - dg[l];
+                for (size_t i = l + 2; i < n; i++) {
+                    dg[i] -= h;
+                }
+                f += h;
+                // implicit QL transformation
+                p = dg[m];
+                float c = 1.0f, c2 = c, c3 = c;
+                float el1 = sub[l + 1];
+                float s = 0.0f, s2 = 0.0f;
+                for (size_t ii = m; ii-- > l;) { // i = m-1 downto l
+                    const size_t i = ii;
+                    c3 = c2;
+                    c2 = c;
+                    s2 = s;
+                    g = c * sub[i];
+                    h = c * p;
+                    r = std::hypot(p, sub[i]);
+                    sub[i + 1] = s * r;
+                    s = sub[i] / r;
+                    c = p / r;
+                    p = c * dg[i] - s * g;
+                    dg[i + 1] = h + s * (c * g + s * dg[i]);
+                    for (size_t k = 0; k < n; k++) {
+                        h = Z(k, i + 1);
+                        Z(k, i + 1) = s * Z(k, i) + c * h;
+                        Z(k, i) = c * Z(k, i) - s * h;
+                    }
+                }
+                p = -s * s2 * c3 * el1 * sub[l] / dl1;
+                sub[l] = s * p;
+                dg[l] = c * p;
+            } while (std::fabs(sub[l]) > eps * tst1);
+        }
+        dg[l] += f;
+        sub[l] = 0.0f;
+    }
+    // sort eigenpairs ascending
+    for (size_t i = 0; i + 1 < n; i++) {
+        size_t k = i;
+        float p = dg[i];
+        for (size_t j = i + 1; j < n; j++) {
+            if (dg[j] < p) {
+                k = j;
+                p = dg[j];
+            }
+        }
+        if (k != i) {
+            dg[k] = dg[i];
+            dg[i] = p;
+            for (size_t j = 0; j < n; j++) {
+                std::swap(Z(j, i), Z(j, k));
             }
         }
     }
+}
 
-    // revert order of eigenvectors & values
+/// Householder reduction of a symmetric `n x n` matrix `a` (row-major, which
+/// equals column-major since it is symmetric) to tridiagonal form. The O(n^3)
+/// bulk runs on BLAS: `sgemv_` for the trailing matrix-vector product and
+/// `sgemm_` (k=2 / k=1) for the symmetric rank-2 update and the accumulation of
+/// the orthogonal factor. On return `dg` is the diagonal, `sub[i]` (i>=1) the
+/// subdiagonal coupling `dg[i-1]`,`dg[i]`, and `z` (column-major) an orthogonal
+/// Q with Q^T A Q = tridiag. `a` is destroyed.
+void tred2_blas(size_t n, float* a, float* dg, float* sub, float* z) {
+    std::fill(z, z + n * n, 0.0f);
+    for (size_t i = 0; i < n; i++) {
+        z[i + i * n] = 1.0f;
+    }
+    std::vector<std::vector<float>> reflectors(n);
+    std::vector<float> beta(n, 0.0f);
+    std::vector<float> p(n), w(n);
 
+    for (size_t k = 0; k + 2 < n; k++) {
+        const size_t m = n - k - 1; // trailing subvector length
+        // Column k below the diagonal is contiguous (a is symmetric): it is
+        // row k, entries k+1 .. n-1.
+        float* x = a + k * n + (k + 1);
+        float xnorm2 = 0.0f;
+        for (size_t t = 0; t < m; t++) {
+            xnorm2 += x[t] * x[t];
+        }
+        reflectors[k].assign(m, 0.0f);
+        if (xnorm2 == 0.0f) {
+            sub[k + 1] = 0.0f;
+            continue;
+        }
+        const float xnorm = std::sqrt(xnorm2);
+        const float alpha = (x[0] >= 0.0f) ? -xnorm : xnorm;
+        std::vector<float>& v = reflectors[k];
+        for (size_t t = 0; t < m; t++) {
+            v[t] = x[t];
+        }
+        v[0] -= alpha;
+        float vnorm2 = 0.0f;
+        for (size_t t = 0; t < m; t++) {
+            vnorm2 += v[t] * v[t];
+        }
+        const float b = (vnorm2 == 0.0f) ? 0.0f : 2.0f / vnorm2;
+        beta[k] = b;
+        sub[k + 1] = alpha;
+
+        // trailing symmetric block B = a[k+1.., k+1..], leading dimension n
+        float* B = a + (k + 1) * n + (k + 1);
+        FINTEGER mi = static_cast<FINTEGER>(m), ni = static_cast<FINTEGER>(n),
+                 inc = 1;
+        float zero = 0.0f, one = 1.0f;
+        // p = b * B * v   (B symmetric, transpose irrelevant)
+        sgemv_("No transpose", &mi, &mi, &b, B, &ni, v.data(), &inc, &zero,
+               p.data(), &inc);
+        float pv = 0.0f;
+        for (size_t t = 0; t < m; t++) {
+            pv += p[t] * v[t];
+        }
+        const float kk = 0.5f * b * pv;
+        for (size_t t = 0; t < m; t++) {
+            w[t] = p[t] - kk * v[t];
+        }
+        // B -= v w^T + w v^T   as  B -= [v w] * [w v]^T   (sgemm, k=2)
+        std::vector<float> U(2 * m), Vm(2 * m);
+        for (size_t t = 0; t < m; t++) {
+            U[t] = v[t];
+            U[m + t] = w[t];
+            Vm[t] = w[t];
+            Vm[m + t] = v[t];
+        }
+        FINTEGER two = 2;
+        float neg_one = -1.0f;
+        sgemm_("No transpose", "Transpose", &mi, &mi, &two, &neg_one, U.data(),
+               &mi, Vm.data(), &mi, &one, B, &ni);
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        dg[i] = a[i * n + i];
+    }
+    sub[0] = 0.0f;
+    if (n >= 2) {
+        sub[n - 1] = a[(n - 2) * n + (n - 1)];
+    }
+
+    // Build Q = H_0 H_1 ... H_{n-3} into z (currently identity):
+    // z := H_k z for k = n-3 downto 0, where H_k = I - beta_k v_k v_k^T.
+    std::vector<float> g(n);
+    for (size_t step = 0; step + 2 < n; step++) {
+        const size_t k = (n - 3) - step;
+        const float b = beta[k];
+        if (b == 0.0f) {
+            continue;
+        }
+        const size_t m = n - k - 1;
+        std::vector<float>& v = reflectors[k];
+        float* zsub = z + (k + 1); // rows k+1.., all cols; column-major ld=n
+        FINTEGER mi = static_cast<FINTEGER>(m), ni = static_cast<FINTEGER>(n),
+                 inc = 1, one_k = 1;
+        float zero = 0.0f, one = 1.0f, neg_b = -b;
+        // g = zsub^T * v   (length n)
+        sgemv_("Transpose", &mi, &ni, &one, zsub, &ni, v.data(), &inc, &zero,
+               g.data(), &inc);
+        // zsub -= b * v * g^T   (rank-1, sgemm k=1)
+        sgemm_("No transpose", "No transpose", &mi, &ni, &one_k, &neg_b,
+               v.data(), &mi, g.data(), &one_k, &one, zsub, &ni);
+    }
+}
+
+/// Compute the eigenvalue decomposition of symmetric matrix cov,
+/// dimensions d_in-by-d_in. Output eigenvectors in cov (row `i` = eigenvector
+/// `i`), eigenvalues descending. LAPACK-free: BLAS reduction + scalar QL.
+void eig(size_t d_in, double* cov, double* eigenvalues, int verbose) {
+    (void)verbose;
+    if (d_in == 0) {
+        return;
+    }
+    if (d_in == 1) {
+        eigenvalues[0] = cov[0];
+        cov[0] = 1.0;
+        return;
+    }
+    std::vector<float> a(d_in * d_in);
+    for (size_t i = 0; i < d_in * d_in; i++) {
+        a[i] = static_cast<float>(cov[i]);
+    }
+    std::vector<float> dg(d_in), sub(d_in), z(d_in * d_in);
+    tred2_blas(d_in, a.data(), dg.data(), sub.data(), z.data());
+    tql2_blas(d_in, dg.data(), sub.data(), z.data());
+
+    // z column j (contiguous z[j*d_in..]) is eigenvector j, ascending. Copy
+    // back into cov with the same "eigenvector j is contiguous" layout dsyev
+    // produced, then revert to descending order (as the original eig did).
+    for (size_t j = 0; j < d_in; j++) {
+        eigenvalues[j] = dg[j];
+        for (size_t i = 0; i < d_in; i++) {
+            cov[j * d_in + i] = z[j * d_in + i];
+        }
+    }
     for (size_t i = 0; i < d_in / 2; i++) {
         std::swap(eigenvalues[i], eigenvalues[d_in - 1 - i]);
         double* v1 = cov + i * d_in;
@@ -693,13 +822,19 @@ void PCAMatrix::train(idx_t n, const float* x_in) {
             }
         }
         {
+            // cov += X * X^T (full symmetric second moment). ssyrk is absent
+            // from serenedb's trimmed BLAS, so use sgemm; filling both
+            // triangles is harmless since the eigensolver reads all of cov.
             FINTEGER di = d_in, ni = static_cast<FINTEGER>(n);
             float one = 1.0;
-            ssyrk_("Up",
-                   "Non transposed",
+            sgemm_("Not transposed",
+                   "Transposed",
+                   &di,
                    &di,
                    &ni,
                    &one,
+                   (float*)x,
+                   &di,
                    (float*)x,
                    &di,
                    &one,
@@ -747,13 +882,17 @@ void PCAMatrix::train(idx_t n, const float* x_in) {
         // compute Gram matrix
         std::vector<float> gram(n * n);
         {
+            // gram = Xc^T * Xc (n x n). sgemm stand-in for the absent ssyrk.
             FINTEGER di = d_in, ni = static_cast<FINTEGER>(n);
             float one = 1.0, zero = 0.0;
-            ssyrk_("Up",
-                   "Transposed",
+            sgemm_("Transposed",
+                   "Not transposed",
+                   &ni,
                    &ni,
                    &di,
                    &one,
+                   xc.data(),
+                   &di,
                    xc.data(),
                    &di,
                    &zero,
@@ -956,6 +1095,8 @@ void PCAMatrix::prepare_Ab() {
     is_orthonormal = eigen_power == 0;
 }
 
+#if 0 // re-disable remaining transforms (ITQ, OPQ, ...): unused by serenedb
+
 /*********************************************
  * ITQMatrix
  *********************************************/
@@ -1134,7 +1275,8 @@ ITQTransform::ITQTransform(int din, int dout, bool do_pca_in)
 }
 
 void ITQTransform::train(idx_t n, const float* x_in) {
-    FAISS_THROW_IF_MSG(is_trained, "ITQTransform has already been trained");
+    FAISS_THROW_IF_NOT_MSG(
+            !is_trained, "ITQTransform has already been trained");
 
     size_t max_train_points = std::max(d_in * max_train_per_dim, 32768);
     const float* x =
@@ -1640,3 +1782,5 @@ void RemapDimensionsTransform::check_identical(
     FAISS_THROW_IF_NOT_MSG(
             other->map == map, "RemapDimensionsTransform maps must match");
 }
+
+#endif
