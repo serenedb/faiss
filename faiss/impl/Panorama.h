@@ -99,6 +99,13 @@ FAISS_PRAGMA_IMPRECISE_FUNCTION_END
 ///
 /// Uses `if constexpr` on C::is_max rather than C::cmp() to ensure the
 /// comparison autovectorizes (C::cmp generates scalar function calls).
+#if defined(__clang__)
+#define FAISS_PRAGMA_PRUNE_LOOP \
+    _Pragma("clang loop vectorize(assume_safety) interleave(enable)")
+#else
+#define FAISS_PRAGMA_PRUNE_LOOP FAISS_PRAGMA_IMPRECISE_LOOP
+#endif
+
 #if !defined(__NVCC__)
 FAISS_PRAGMA_IMPRECISE_FUNCTION_BEGIN
 #endif
@@ -112,7 +119,7 @@ static inline void prune_kernel(
         const uint32_t num_active,
         const float query_cum_norm,
         const float threshold) {
-    FAISS_PRAGMA_IMPRECISE_LOOP
+    FAISS_PRAGMA_PRUNE_LOOP
     for (uint32_t i = 0; i < num_active; i++) {
         uint32_t idx = AllActive ? i : active_indices[i];
         if constexpr (M == METRIC_INNER_PRODUCT) {
