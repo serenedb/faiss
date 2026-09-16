@@ -778,22 +778,33 @@ void sq8_batch_score4<SIMDLevel::AVX512>(
         float out[4],
         size_t d) {
     __m512 acc[4], acc2[4];
+    __m512i isq[4];
     for (int k = 0; k < 4; k++) {
         acc[k] = _mm512_setzero_ps();
         acc2[k] = _mm512_setzero_ps();
+        isq[k] = _mm512_setzero_si512();
     }
     const float* a = w.a.data();
     const float* b = w.b.data();
     const bool l2 = w.l2;
+    // A uniform range gives every dimension the same v_d, so the squared term
+    // is one constant times sum_d c_d^2 -- an integer accumulator rather than
+    // a second float chain and a second coefficient stream. Codes are at most
+    // 255, so the squares fit in int32 for any d that fits in memory.
+    const bool uniform_l2 = l2 && w.uniform_sq != 0;
     size_t i = 0;
     for (; i + 16 <= d; i += 16) {
         const __m512 va = _mm512_loadu_ps(a + i);
-        const __m512 vb = l2 ? _mm512_loadu_ps(b + i) : _mm512_setzero_ps();
+        const __m512 vb = (l2 && !uniform_l2) ? _mm512_loadu_ps(b + i)
+                                             : _mm512_setzero_ps();
         for (int k = 0; k < 4; k++) {
-            const __m512 c = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(
-                    _mm_loadu_si128((const __m128i*)(codes[k] + i))));
+            const __m512i ci = _mm512_cvtepu8_epi32(
+                    _mm_loadu_si128((const __m128i*)(codes[k] + i)));
+            const __m512 c = _mm512_cvtepi32_ps(ci);
             acc[k] = _mm512_fmadd_ps(va, c, acc[k]);
-            if (l2) {
+            if (uniform_l2) {
+                isq[k] = _mm512_add_epi32(isq[k], _mm512_mullo_epi32(ci, ci));
+            } else if (l2) {
                 acc2[k] = _mm512_fmadd_ps(vb, _mm512_mul_ps(c, c), acc2[k]);
             }
         }
@@ -801,13 +812,16 @@ void sq8_batch_score4<SIMDLevel::AVX512>(
     if (i < d) {
         const __mmask16 m = (__mmask16)((1u << (d - i)) - 1u);
         const __m512 va = _mm512_maskz_loadu_ps(m, a + i);
-        const __m512 vb =
-                l2 ? _mm512_maskz_loadu_ps(m, b + i) : _mm512_setzero_ps();
+        const __m512 vb = (l2 && !uniform_l2) ? _mm512_maskz_loadu_ps(m, b + i)
+                                              : _mm512_setzero_ps();
         for (int k = 0; k < 4; k++) {
-            const __m512 c = _mm512_cvtepi32_ps(
-                    _mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(m, codes[k] + i)));
+            const __m512i ci =
+                    _mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(m, codes[k] + i));
+            const __m512 c = _mm512_cvtepi32_ps(ci);
             acc[k] = _mm512_fmadd_ps(va, c, acc[k]);
-            if (l2) {
+            if (uniform_l2) {
+                isq[k] = _mm512_add_epi32(isq[k], _mm512_mullo_epi32(ci, ci));
+            } else if (l2) {
                 acc2[k] = _mm512_fmadd_ps(vb, _mm512_mul_ps(c, c), acc2[k]);
             }
         }
@@ -815,7 +829,15 @@ void sq8_batch_score4<SIMDLevel::AVX512>(
     // One horizontal sum per code: the two chains are joined first, then the
     // sixteen lanes fold in four steps.
     for (int k = 0; k < 4; k++) {
-        __m512 s = l2 ? _mm512_add_ps(acc[k], acc2[k]) : acc[k];
+        __m512 s = acc[k];
+        if (uniform_l2) {
+            s = _mm512_fmadd_ps(
+                    _mm512_set1_ps(w.uniform_sq),
+                    _mm512_cvtepi32_ps(isq[k]),
+                    s);
+        } else if (l2) {
+            s = _mm512_add_ps(s, acc2[k]);
+        }
         const __m256 h = _mm256_add_ps(
                 _mm512_castps512_ps256(s), _mm512_extractf32x8_ps(s, 1));
         __m128 q = _mm_add_ps(
