@@ -17,6 +17,7 @@
 #include <faiss/impl/scalar_quantizer/quantizers.h>
 #include <faiss/impl/scalar_quantizer/scanners.h>
 #include <faiss/impl/scalar_quantizer/similarities.h>
+#include <faiss/impl/scalar_quantizer/sq8_batch.h>
 #include <faiss/impl/scalar_quantizer/sq8_coefficients.h>
 
 namespace faiss {
@@ -943,5 +944,84 @@ InvertedListScanner* sq_select_InvertedListScanner<SIMDLevel::ARM_SVE>(
 } // namespace faiss
 
 #endif // COMPILE_SIMD_ARM_SVE
+
+namespace faiss {
+namespace scalar_quantizer {
+
+template <SIMDLevel SL0>
+void sq8_batch_score4(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d);
+
+/**********************************************************
+ * QT_8bit batched scoring, NEON specialization
+ **********************************************************/
+
+template <>
+void sq8_batch_score4<SIMDLevel::ARM_NEON>(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d) {
+    float32x4_t acc[4], acc2[4];
+    uint32x4_t isq[4];
+    for (int k = 0; k < 4; k++) {
+        acc[k] = vdupq_n_f32(0.f);
+        acc2[k] = vdupq_n_f32(0.f);
+        isq[k] = vdupq_n_u32(0);
+    }
+    const float* a = w.a.data();
+    const float* b = w.b.data();
+    const bool l2 = w.l2;
+    // See the AVX-512 kernel: a uniform range turns the squared term into one
+    // constant times an integer sum of squares.
+    const bool uniform_l2 = w.uniform_l2();
+    size_t i = 0;
+    for (; i + 4 <= d; i += 4) {
+        const float32x4_t va = vld1q_f32(a + i);
+        const float32x4_t vb = (l2 && !uniform_l2) ? vld1q_f32(b + i)
+                                                   : vdupq_n_f32(0.f);
+        for (int k = 0; k < 4; k++) {
+            uint32_t packed;
+            memcpy(&packed, codes[k] + i, sizeof(packed));
+            const uint8x8_t bytes = vreinterpret_u8_u32(vdup_n_u32(packed));
+            const uint16x4_t half = vget_low_u16(vmovl_u8(bytes));
+            const uint32x4_t widened = vmovl_u16(half);
+            const float32x4_t c = vcvtq_f32_u32(widened);
+            acc[k] = vfmaq_f32(acc[k], va, c);
+            if (uniform_l2) {
+                isq[k] = vaddq_u32(isq[k], vmull_u16(half, half));
+            } else if (l2) {
+                acc2[k] = vfmaq_f32(acc2[k], vb, vmulq_f32(c, c));
+            }
+        }
+    }
+    float tail[4] = {0, 0, 0, 0};
+    for (; i < d; i++) {
+        for (int k = 0; k < 4; k++) {
+            const float c = float(codes[k][i]);
+            if (uniform_l2) {
+                tail[k] += a[i] * c + w.uniform_sq * c * c;
+            } else {
+                tail[k] += l2 ? a[i] * c + b[i] * c * c : a[i] * c;
+            }
+        }
+    }
+    for (int k = 0; k < 4; k++) {
+        float32x4_t s = acc[k];
+        if (uniform_l2) {
+            s = vfmaq_n_f32(s, vcvtq_f32_u32(isq[k]), w.uniform_sq);
+        } else if (l2) {
+            s = vaddq_f32(s, acc2[k]);
+        }
+        const float r = w.bias + vaddvq_f32(s) + tail[k];
+        out[k] = l2 ? -r : r;
+    }
+}
+
+} // namespace scalar_quantizer
+} // namespace faiss
 
 #endif // COMPILE_SIMD_ARM_NEON
