@@ -17,6 +17,7 @@
 #include <faiss/impl/scalar_quantizer/quantizers.h>
 #include <faiss/impl/scalar_quantizer/scanners.h>
 #include <faiss/impl/scalar_quantizer/similarities.h>
+#include <faiss/impl/scalar_quantizer/sq8_batch.h>
 
 namespace faiss {
 
@@ -844,6 +845,63 @@ InvertedListScanner* sq_select_InvertedListScanner<SIMDLevel::ARM_SVE>(
             store_pairs,
             sel,
             by_residual);
+}
+
+
+template <SIMDLevel SL0>
+void sq8_batch_score4(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d);
+
+/**********************************************************
+ * QT_8bit batched scoring, NEON specialization
+ **********************************************************/
+
+template <>
+void sq8_batch_score4<SIMDLevel::ARM_NEON>(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d) {
+    float32x4_t acc[4], acc2[4];
+    for (int k = 0; k < 4; k++) {
+        acc[k] = vdupq_n_f32(0.f);
+        acc2[k] = vdupq_n_f32(0.f);
+    }
+    const float* a = w.a.data();
+    const float* b = w.b.data();
+    const bool l2 = w.l2;
+    size_t i = 0;
+    for (; i + 4 <= d; i += 4) {
+        const float32x4_t va = vld1q_f32(a + i);
+        const float32x4_t vb = l2 ? vld1q_f32(b + i) : vdupq_n_f32(0.f);
+        for (int k = 0; k < 4; k++) {
+            uint32_t packed;
+            memcpy(&packed, codes[k] + i, sizeof(packed));
+            const uint8x8_t bytes = vreinterpret_u8_u32(vdup_n_u32(packed));
+            const uint32x4_t widened =
+                    vmovl_u16(vget_low_u16(vmovl_u8(bytes)));
+            const float32x4_t c = vcvtq_f32_u32(widened);
+            acc[k] = vfmaq_f32(acc[k], va, c);
+            if (l2) {
+                acc2[k] = vfmaq_f32(acc2[k], vb, vmulq_f32(c, c));
+            }
+        }
+    }
+    float tail[4] = {0, 0, 0, 0};
+    for (; i < d; i++) {
+        for (int k = 0; k < 4; k++) {
+            const float c = float(codes[k][i]);
+            tail[k] += l2 ? a[i] * c + b[i] * c * c : a[i] * c;
+        }
+    }
+    for (int k = 0; k < 4; k++) {
+        const float32x4_t s = l2 ? vaddq_f32(acc[k], acc2[k]) : acc[k];
+        const float r = w.bias + vaddvq_f32(s) + tail[k];
+        out[k] = l2 ? -r : r;
+    }
 }
 
 } // namespace scalar_quantizer

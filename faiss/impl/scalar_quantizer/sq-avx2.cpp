@@ -16,6 +16,7 @@
 #include <faiss/impl/scalar_quantizer/quantizers.h>
 #include <faiss/impl/scalar_quantizer/scanners.h>
 #include <faiss/impl/scalar_quantizer/similarities.h>
+#include <faiss/impl/scalar_quantizer/sq8_batch.h>
 
 namespace faiss {
 
@@ -895,6 +896,63 @@ float turboq_masked_sum<SIMDLevel::AVX2>(
         }
     }
     return result;
+}
+
+
+template <SIMDLevel SL0>
+void sq8_batch_score4(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d);
+
+/**********************************************************
+ * QT_8bit batched scoring, AVX2 specialization
+ **********************************************************/
+
+template <>
+void sq8_batch_score4<SIMDLevel::AVX2>(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d) {
+    __m256 acc[4], acc2[4];
+    for (int k = 0; k < 4; k++) {
+        acc[k] = _mm256_setzero_ps();
+        acc2[k] = _mm256_setzero_ps();
+    }
+    const float* a = w.a.data();
+    const float* b = w.b.data();
+    const bool l2 = w.l2;
+    size_t i = 0;
+    for (; i + 8 <= d; i += 8) {
+        const __m256 va = _mm256_loadu_ps(a + i);
+        const __m256 vb = l2 ? _mm256_loadu_ps(b + i) : _mm256_setzero_ps();
+        for (int k = 0; k < 4; k++) {
+            const __m256 c = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(
+                    _mm_loadl_epi64((const __m128i*)(codes[k] + i))));
+            acc[k] = _mm256_fmadd_ps(va, c, acc[k]);
+            if (l2) {
+                acc2[k] = _mm256_fmadd_ps(vb, _mm256_mul_ps(c, c), acc2[k]);
+            }
+        }
+    }
+    float tail[4] = {0, 0, 0, 0};
+    for (; i < d; i++) {
+        for (int k = 0; k < 4; k++) {
+            const float c = float(codes[k][i]);
+            tail[k] += l2 ? a[i] * c + b[i] * c * c : a[i] * c;
+        }
+    }
+    for (int k = 0; k < 4; k++) {
+        __m256 s = l2 ? _mm256_add_ps(acc[k], acc2[k]) : acc[k];
+        __m128 q = _mm_add_ps(
+                _mm256_castps256_ps128(s), _mm256_extractf128_ps(s, 1));
+        q = _mm_add_ps(q, _mm_movehl_ps(q, q));
+        q = _mm_add_ss(q, _mm_movehdup_ps(q));
+        const float r = w.bias + _mm_cvtss_f32(q) + tail[k];
+        out[k] = l2 ? -r : r;
+    }
 }
 
 } // namespace scalar_quantizer
