@@ -18,32 +18,44 @@ void sq8_batch_train(
         const float* query,
         bool l2,
         SQ8BatchWeights& w) {
+    const bool uniform = sq.qtype == ScalarQuantizer::QT_8bit_uniform;
     FAISS_THROW_IF_NOT_MSG(
-            sq.qtype == ScalarQuantizer::QT_8bit,
-            "sq8_batch_train expects a QT_8bit quantizer");
-    FAISS_THROW_IF_NOT(sq.trained.size() >= 2 * sq.d);
+            uniform || sq.qtype == ScalarQuantizer::QT_8bit,
+            "sq8_batch_train expects QT_8bit or QT_8bit_uniform");
+    FAISS_THROW_IF_NOT(sq.trained.size() >= (uniform ? 2 : 2 * sq.d));
 
+    // QT_8bit_uniform trains one [vmin, vdiff] for the whole vector, so the
+    // per-dimension reads below collapse to a stride of zero.
     const float* vmin = sq.trained.data();
-    const float* vdiff = sq.trained.data() + sq.d;
+    const float* vdiff = sq.trained.data() + (uniform ? 1 : sq.d);
+    const size_t stride = uniform ? 0 : 1;
 
     w.d = sq.d;
     w.l2 = l2;
     w.a.resize(sq.d);
-    w.b.resize(l2 ? sq.d : 0);
+    // A uniform range makes v_d a constant, carried in uniform_sq instead of a
+    // vector the kernel would reload every sixteen lanes.
+    w.b.resize(l2 && !uniform ? sq.d : 0);
+    w.uniform_sq = 0;
 
     // Accumulated in double: the two halves of the L2 bias are large and of
     // opposite sign once the code term is added back, so a float accumulator
     // loses the difference between adjacent neighbours.
     double bias = 0;
     for (size_t i = 0; i < sq.d; i++) {
-        const float s = vdiff[i] / 255.f;
+        const size_t j = i * stride;
+        const float s = vdiff[j] / 255.f;
         if (l2) {
-            const float a = query[i] - vmin[i] - 0.5f * s;
+            const float a = query[i] - vmin[j] - 0.5f * s;
             bias += double(a) * a;
             w.a[i] = -2.f * a * s;
-            w.b[i] = s * s;
+            if (uniform) {
+                w.uniform_sq = s * s;
+            } else {
+                w.b[i] = s * s;
+            }
         } else {
-            bias += double(query[i]) * (vmin[i] + 0.5f * s);
+            bias += double(query[i]) * (vmin[j] + 0.5f * s);
             w.a[i] = query[i] * s;
         }
     }
@@ -61,7 +73,14 @@ void sq8_batch_score4<SIMDLevel::NONE>(
     for (int k = 0; k < 4; k++) {
         const uint8_t* c = codes[k];
         float acc = 0;
-        if (w.l2) {
+        if (w.l2 && w.uniform_sq != 0) {
+            uint32_t sq_sum = 0;
+            for (size_t i = 0; i < d; i++) {
+                acc += a[i] * float(c[i]);
+                sq_sum += uint32_t(c[i]) * uint32_t(c[i]);
+            }
+            acc += w.uniform_sq * float(sq_sum);
+        } else if (w.l2) {
             for (size_t i = 0; i < d; i++) {
                 const float ci = float(c[i]);
                 acc += a[i] * ci + b[i] * ci * ci;
