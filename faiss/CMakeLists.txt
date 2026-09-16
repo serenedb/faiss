@@ -181,6 +181,7 @@ set(FAISS_SRC
   # impl/LocalSearchQuantizer.cpp
   # impl/ProductAdditiveQuantizer.cpp
   impl/ScalarQuantizer.cpp
+  impl/scalar_quantizer/sq8_batch.cpp
   impl/scalar_quantizer/training.cpp
   # impl/index_read.cpp
   # impl/index_write.cpp
@@ -340,6 +341,7 @@ set(FAISS_HEADERS
   impl/scalar_quantizer/sq8_rvv_kernel.h
   utils/simd_impl/distances_rvv_kernel.h
   impl/scalar_quantizer/sq-dispatch.h
+  impl/scalar_quantizer/sq8_batch.h
   impl/scalar_quantizer/training.h
   impl/ThreadedIndex-inl.h
   impl/ThreadedIndex.h
