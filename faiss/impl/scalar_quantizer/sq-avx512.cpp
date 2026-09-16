@@ -16,6 +16,7 @@
 #include <faiss/impl/scalar_quantizer/quantizers.h>
 #include <faiss/impl/scalar_quantizer/scanners.h>
 #include <faiss/impl/scalar_quantizer/similarities.h>
+#include <faiss/impl/scalar_quantizer/sq8_batch.h>
 
 namespace faiss {
 
@@ -756,6 +757,74 @@ float turboq_masked_sum<SIMDLevel::AVX512>(
         result += _mm512_reduce_add_ps(masked_tail);
     }
     return result;
+}
+
+
+template <SIMDLevel SL0>
+void sq8_batch_score4(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d);
+
+/**********************************************************
+ * QT_8bit batched scoring, AVX512 specialization
+ **********************************************************/
+
+template <>
+void sq8_batch_score4<SIMDLevel::AVX512>(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d) {
+    __m512 acc[4], acc2[4];
+    for (int k = 0; k < 4; k++) {
+        acc[k] = _mm512_setzero_ps();
+        acc2[k] = _mm512_setzero_ps();
+    }
+    const float* a = w.a.data();
+    const float* b = w.b.data();
+    const bool l2 = w.l2;
+    size_t i = 0;
+    for (; i + 16 <= d; i += 16) {
+        const __m512 va = _mm512_loadu_ps(a + i);
+        const __m512 vb = l2 ? _mm512_loadu_ps(b + i) : _mm512_setzero_ps();
+        for (int k = 0; k < 4; k++) {
+            const __m512 c = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(
+                    _mm_loadu_si128((const __m128i*)(codes[k] + i))));
+            acc[k] = _mm512_fmadd_ps(va, c, acc[k]);
+            if (l2) {
+                acc2[k] = _mm512_fmadd_ps(vb, _mm512_mul_ps(c, c), acc2[k]);
+            }
+        }
+    }
+    if (i < d) {
+        const __mmask16 m = (__mmask16)((1u << (d - i)) - 1u);
+        const __m512 va = _mm512_maskz_loadu_ps(m, a + i);
+        const __m512 vb =
+                l2 ? _mm512_maskz_loadu_ps(m, b + i) : _mm512_setzero_ps();
+        for (int k = 0; k < 4; k++) {
+            const __m512 c = _mm512_cvtepi32_ps(
+                    _mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(m, codes[k] + i)));
+            acc[k] = _mm512_fmadd_ps(va, c, acc[k]);
+            if (l2) {
+                acc2[k] = _mm512_fmadd_ps(vb, _mm512_mul_ps(c, c), acc2[k]);
+            }
+        }
+    }
+    // One horizontal sum per code: the two chains are joined first, then the
+    // sixteen lanes fold in four steps.
+    for (int k = 0; k < 4; k++) {
+        __m512 s = l2 ? _mm512_add_ps(acc[k], acc2[k]) : acc[k];
+        const __m256 h = _mm256_add_ps(
+                _mm512_castps512_ps256(s), _mm512_extractf32x8_ps(s, 1));
+        __m128 q = _mm_add_ps(
+                _mm256_castps256_ps128(h), _mm256_extractf128_ps(h, 1));
+        q = _mm_add_ps(q, _mm_movehl_ps(q, q));
+        q = _mm_add_ss(q, _mm_movehdup_ps(q));
+        const float r = w.bias + _mm_cvtss_f32(q);
+        out[k] = l2 ? -r : r;
+    }
 }
 
 } // namespace scalar_quantizer

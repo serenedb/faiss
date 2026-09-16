@@ -429,9 +429,17 @@ void accumulate_to_mem(
         const uint8_t* LUT,
         uint16_t* accu) {
     FAISS_THROW_IF_NOT(ntotal2 % 32 == 0);
-    with_simd_level([&]<SIMDLevel SL>() {
-        accumulate_to_mem_impl<SL>(nq, ntotal2, nsq, codes, LUT, accu);
-    });
+    // impl-avx512.cpp is not part of this build -- it reaches into the index
+    // layer, which is compiled out -- so the AVX-512 specialization does not
+    // exist and dispatch falls back to AVX2 for it. Naming the mask keeps a
+    // dynamic-dispatch build from asking for a symbol nobody defined.
+    constexpr int AVAILABLE_SIMD_LEVELS_FAST_SCAN =
+            AVAILABLE_SIMD_LEVELS_AVX2_NEON |
+            (1 << int(SIMDLevel::RISCV_RVV));
+    with_selected_simd_levels<AVAILABLE_SIMD_LEVELS_FAST_SCAN>(
+            [&]<SIMDLevel SL>() {
+                accumulate_to_mem_impl<SL>(nq, ntotal2, nsq, codes, LUT, accu);
+            });
 }
 
 } // namespace faiss
