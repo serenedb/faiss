@@ -51,6 +51,12 @@ struct SQ8BatchWeights {
     std::vector<float> b;
     /// C (inner product) or A (L2).
     float bias = 0;
+    /// Set when every dimension shares one range (QT_8bit_uniform): then
+    /// v_d = s^2 is the same constant for all d, so sum_d v_d c_d^2 becomes
+    /// uniform_sq * sum_d c_d^2 and the squared term accumulates in integers
+    /// rather than as a second float FMA chain. Zero for inner product and
+    /// for the per-dimension quantizer.
+    float uniform_sq = 0;
     /// Number of dimensions the coefficients cover.
     size_t d = 0;
     /// True when the coefficients encode squared L2 rather than inner product.
@@ -59,7 +65,10 @@ struct SQ8BatchWeights {
 
 /** Build the per-query coefficients.
  *
- * @param sq     a trained QT_8bit quantizer; sq.trained holds [vmin, vdiff]
+ * Accepts QT_8bit (per-dimension [vmin, vdiff]) and QT_8bit_uniform (one
+ * shared [vmin, vdiff]); the uniform case additionally sets uniform_sq.
+ *
+ * @param sq     a trained QT_8bit or QT_8bit_uniform quantizer
  * @param query  sq.d floats
  * @param l2     squared L2 when true, inner product when false
  * @param w      output, resized as needed

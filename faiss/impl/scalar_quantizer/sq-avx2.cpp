@@ -917,22 +917,31 @@ void sq8_batch_score4<SIMDLevel::AVX2>(
         float out[4],
         size_t d) {
     __m256 acc[4], acc2[4];
+    __m256i isq[4];
     for (int k = 0; k < 4; k++) {
         acc[k] = _mm256_setzero_ps();
         acc2[k] = _mm256_setzero_ps();
+        isq[k] = _mm256_setzero_si256();
     }
     const float* a = w.a.data();
     const float* b = w.b.data();
     const bool l2 = w.l2;
+    // See the AVX-512 kernel: a uniform range turns the squared term into one
+    // constant times an integer sum of squares.
+    const bool uniform_l2 = l2 && w.uniform_sq != 0;
     size_t i = 0;
     for (; i + 8 <= d; i += 8) {
         const __m256 va = _mm256_loadu_ps(a + i);
-        const __m256 vb = l2 ? _mm256_loadu_ps(b + i) : _mm256_setzero_ps();
+        const __m256 vb = (l2 && !uniform_l2) ? _mm256_loadu_ps(b + i)
+                                              : _mm256_setzero_ps();
         for (int k = 0; k < 4; k++) {
-            const __m256 c = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(
-                    _mm_loadl_epi64((const __m128i*)(codes[k] + i))));
+            const __m256i ci = _mm256_cvtepu8_epi32(
+                    _mm_loadl_epi64((const __m128i*)(codes[k] + i)));
+            const __m256 c = _mm256_cvtepi32_ps(ci);
             acc[k] = _mm256_fmadd_ps(va, c, acc[k]);
-            if (l2) {
+            if (uniform_l2) {
+                isq[k] = _mm256_add_epi32(isq[k], _mm256_mullo_epi32(ci, ci));
+            } else if (l2) {
                 acc2[k] = _mm256_fmadd_ps(vb, _mm256_mul_ps(c, c), acc2[k]);
             }
         }
@@ -941,11 +950,23 @@ void sq8_batch_score4<SIMDLevel::AVX2>(
     for (; i < d; i++) {
         for (int k = 0; k < 4; k++) {
             const float c = float(codes[k][i]);
-            tail[k] += l2 ? a[i] * c + b[i] * c * c : a[i] * c;
+            if (uniform_l2) {
+                tail[k] += a[i] * c + w.uniform_sq * c * c;
+            } else {
+                tail[k] += l2 ? a[i] * c + b[i] * c * c : a[i] * c;
+            }
         }
     }
     for (int k = 0; k < 4; k++) {
-        __m256 s = l2 ? _mm256_add_ps(acc[k], acc2[k]) : acc[k];
+        __m256 s = acc[k];
+        if (uniform_l2) {
+            s = _mm256_fmadd_ps(
+                    _mm256_set1_ps(w.uniform_sq),
+                    _mm256_cvtepi32_ps(isq[k]),
+                    s);
+        } else if (l2) {
+            s = _mm256_add_ps(s, acc2[k]);
+        }
         __m128 q = _mm_add_ps(
                 _mm256_castps256_ps128(s), _mm256_extractf128_ps(s, 1));
         q = _mm_add_ps(q, _mm_movehl_ps(q, q));
