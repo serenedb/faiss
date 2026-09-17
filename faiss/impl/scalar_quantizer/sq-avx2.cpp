@@ -928,7 +928,7 @@ void sq8_batch_score4<SIMDLevel::AVX2>(
     const bool l2 = w.l2;
     // See the AVX-512 kernel: a uniform range turns the squared term into one
     // constant times an integer sum of squares.
-    const bool uniform_l2 = l2 && w.uniform_sq != 0;
+    const bool uniform_l2 = w.uniform_l2();
     size_t i = 0;
     for (; i + 8 <= d; i += 8) {
         const __m256 va = _mm256_loadu_ps(a + i);

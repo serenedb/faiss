@@ -47,7 +47,8 @@ namespace scalar_quantizer {
 struct SQ8BatchWeights {
     /// w_d (inner product) or u_d (L2).
     std::vector<float> a;
-    /// v_d; empty for inner product.
+    /// v_d; empty for inner product and for the uniform quantizer, whose v_d
+    /// is the single constant in uniform_sq.
     std::vector<float> b;
     /// C (inner product) or A (L2).
     float bias = 0;
@@ -61,6 +62,15 @@ struct SQ8BatchWeights {
     size_t d = 0;
     /// True when the coefficients encode squared L2 rather than inner product.
     bool l2 = false;
+
+    /// True when the L2 squared term is the single constant uniform_sq rather
+    /// than the per-dimension vector b, which is then empty. The distinction
+    /// cannot be read off uniform_sq's value: a corpus whose vectors are all
+    /// identical trains vdiff = 0, so the constant is legitimately zero while
+    /// b is still absent.
+    bool uniform_l2() const {
+        return l2 && b.empty();
+    }
 };
 
 /** Build the per-query coefficients.
