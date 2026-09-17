@@ -34,15 +34,16 @@ set(FAISS_SIMD_AVX512_SRC
   utils/simd_impl/rabitq_avx512.cpp
   utils/simd_impl/super_kmeans_kernels_avx512.cpp
 )
-# AVX-512 sources that additionally require AVX512_VPOPCNTDQ
-# (Sapphire Rapids and later). Compiled into faiss_avx512_spr only,
-# and into the DD faiss target with an extra per-file -mavx512vpopcntdq
-# flag. Not compiled into faiss_avx512 — that target stops at the
-# baseline AVX-512F/CD/VL/DQ/BW feature set.
+# AVX-512 sources that require AVX512_VPOPCNTDQ and AVX512_BITALG on top of
+# the baseline AVX-512F/CD/VL/DQ/BW feature set. In DD builds these are
+# available on CPUs such as Ice Lake and Zen 4 without the full SPR set.
+set(FAISS_SIMD_AVX512_VPOPCNT_SRC
+  utils/simd_impl/rabitq_avx512_vpopcnt.cpp
+  utils/hamming_distance/hamming_avx512_vpopcnt.cpp
+)
+# AVX-512 sources that require the full Sapphire Rapids feature set.
 set(FAISS_SIMD_AVX512_SPR_SRC
   impl/scalar_quantizer/sq-avx512-spr.cpp
-  utils/simd_impl/rabitq_avx512_spr.cpp
-  utils/hamming_distance/hamming_avx512_spr.cpp
 )
 set(FAISS_SIMD_NEON_SRC
   impl/fast_scan/impl-neon.cpp
@@ -74,7 +75,8 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
   set(FAISS_SIMD_SRC
     ${FAISS_SIMD_AVX2_SRC}
     ${FAISS_SIMD_AVX512_SRC}
-    ${FAISS_SIMD_AVX512_SPR_SRC} ${FAISS_SIMD_AVX512_SPR_SRC})
+    ${FAISS_SIMD_AVX512_VPOPCNT_SRC}
+    ${FAISS_SIMD_AVX512_SPR_SRC})
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64|ARM64)")
   set(FAISS_SIMD_SRC ${FAISS_SIMD_NEON_SRC} ${FAISS_SIMD_SVE_SRC})
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(riscv64|riscv)")
@@ -392,7 +394,7 @@ set(FAISS_HEADERS
   utils/hamming_distance/hamming_computer.h
   utils/hamming_distance/hamming_computer-avx2.h
   utils/hamming_distance/hamming_computer-avx512.h
-  utils/hamming_distance/hamming_computer-avx512_spr.h
+  utils/hamming_distance/hamming_computer-avx512_vpopcnt.h
   utils/hamming_distance/hamming_computer-generic.h
   utils/hamming_distance/hamming_computer-neon.h
   utils/hamming_distance/hamming_computer-rvv.h
@@ -486,7 +488,8 @@ else()
   # we need bigobj for the swig wrapper
   add_compile_options(/bigobj)
 endif()
-target_sources(faiss_avx512_spr PRIVATE ${FAISS_SIMD_AVX2_SRC} ${FAISS_SIMD_AVX512_SRC} ${FAISS_SIMD_AVX512_SPR_SRC})
+target_sources(faiss_avx512_spr PRIVATE ${FAISS_SIMD_AVX2_SRC} ${FAISS_SIMD_AVX512_SRC}
+  ${FAISS_SIMD_AVX512_VPOPCNT_SRC} ${FAISS_SIMD_AVX512_SPR_SRC})
 target_compile_definitions(faiss_avx512_spr PRIVATE COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512 COMPILE_SIMD_AVX512_SPR)
 
 add_library(faiss_sve ${FAISS_SRC})
