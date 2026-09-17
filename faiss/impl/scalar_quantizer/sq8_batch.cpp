@@ -73,7 +73,7 @@ void sq8_batch_score4<SIMDLevel::NONE>(
     for (int k = 0; k < 4; k++) {
         const uint8_t* c = codes[k];
         float acc = 0;
-        if (w.l2 && w.uniform_sq != 0) {
+        if (w.uniform_l2()) {
             uint32_t sq_sum = 0;
             for (size_t i = 0; i < d; i++) {
                 acc += a[i] * float(c[i]);

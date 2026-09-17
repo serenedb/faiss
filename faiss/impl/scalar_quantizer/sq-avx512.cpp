@@ -858,7 +858,7 @@ void sq8_batch_score4<SIMDLevel::AVX512>(
     // is one constant times sum_d c_d^2 -- an integer accumulator rather than
     // a second float chain and a second coefficient stream. Codes are at most
     // 255, so the squares fit in int32 for any d that fits in memory.
-    const bool uniform_l2 = l2 && w.uniform_sq != 0;
+    const bool uniform_l2 = w.uniform_l2();
     size_t i = 0;
     for (; i + 16 <= d; i += 16) {
         const __m512 va = _mm512_loadu_ps(a + i);
