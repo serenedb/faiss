@@ -12,6 +12,7 @@ set(FAISS_SIMD_AVX2_SRC
   impl/fast_scan/impl-avx2.cpp
   impl/hnsw/avx2.cpp
   impl/pq_code_distance/avx2.cpp
+  impl/result_handler/avx2.cpp
   impl/scalar_quantizer/sq-avx2.cpp
   impl/approx_topk/avx2.cpp
   impl/binary_hamming/avx2.cpp
@@ -26,6 +27,7 @@ set(FAISS_SIMD_AVX512_SRC
   # impl/fast_scan/impl-avx512.cpp
   impl/hnsw/avx512.cpp
   impl/pq_code_distance/avx512.cpp
+  impl/result_handler/avx512.cpp
   impl/scalar_quantizer/sq-avx512.cpp
   impl/binary_hamming/avx512.cpp
   utils/simd_impl/distances_avx512.cpp
@@ -164,6 +166,7 @@ set(FAISS_SRC
   # impl/LocalSearchQuantizer.cpp
   # impl/ProductAdditiveQuantizer.cpp
   impl/ScalarQuantizer.cpp
+  impl/result_handler/ResultHandler.cpp
   impl/scalar_quantizer/sq8_batch.cpp
   impl/scalar_quantizer/training.cpp
   # impl/index_read.cpp
@@ -198,7 +201,7 @@ set(FAISS_SRC
   utils/utils.cpp
   utils/simd_levels.cpp
   # utils/distances_fused/avx512.cpp
-  # utils/distances_fused/distances_fused.cpp
+  utils/distances_fused/distances_fused.cpp
   # utils/distances_fused/simdlib_based.cpp
 )
 
@@ -490,7 +493,8 @@ else()
 endif()
 target_sources(faiss_avx512_spr PRIVATE ${FAISS_SIMD_AVX2_SRC} ${FAISS_SIMD_AVX512_SRC}
   ${FAISS_SIMD_AVX512_VPOPCNT_SRC} ${FAISS_SIMD_AVX512_SPR_SRC})
-target_compile_definitions(faiss_avx512_spr PRIVATE COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512 COMPILE_SIMD_AVX512_SPR)
+target_compile_definitions(faiss_avx512_spr PRIVATE COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512
+  COMPILE_SIMD_AVX512_VPOPCNT COMPILE_SIMD_AVX512_SPR)
 
 add_library(faiss_sve ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "sve")
@@ -532,7 +536,8 @@ if(FAISS_OPT_LEVEL STREQUAL "dd")
   # Architecture-specific SIMD definitions for Dynamic Dispatch
   if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
     target_compile_definitions(faiss PRIVATE
-      COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512 COMPILE_SIMD_AVX512_SPR)
+      COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512 COMPILE_SIMD_AVX512_VPOPCNT
+      COMPILE_SIMD_AVX512_SPR)
     if(NOT WIN32)
       # Baseline flags for common files (prevents auto-vectorization)
       target_compile_options(faiss PRIVATE
@@ -547,9 +552,14 @@ if(FAISS_OPT_LEVEL STREQUAL "dd")
         PROPERTIES COMPILE_OPTIONS
           "-mavx512f;-mavx512cd;-mavx512vl;-mavx512dq;-mavx512bw;-mfma;-mf16c;-mpopcnt"
       )
-      # SPR-only sources additionally require AVX512_VPOPCNTDQ.
-      # vpopcntq is the whole point of these files, so the extra flag
-      # is mandatory; without it the intrinsics fail to compile.
+      # VPOPCNT sources need VPOPCNTDQ and BITALG on top of baseline AVX-512;
+      # vpopcntq is the whole point of them, so the flags are mandatory.
+      set_source_files_properties(${FAISS_SIMD_AVX512_VPOPCNT_SRC}
+        TARGET_DIRECTORY faiss
+        PROPERTIES COMPILE_OPTIONS
+          "-mavx2;-mfma;-mf16c;-mavx512f;-mavx512cd;-mavx512vl;-mavx512dq;-mavx512bw;-mavx512vpopcntdq;-mavx512bitalg;-mpopcnt"
+      )
+      # The remaining SPR sources need the full Sapphire Rapids set.
       set_source_files_properties(${FAISS_SIMD_AVX512_SPR_SRC}
         TARGET_DIRECTORY faiss
         PROPERTIES COMPILE_OPTIONS
