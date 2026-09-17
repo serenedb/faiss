@@ -209,6 +209,24 @@ void LinearTransform::apply_noalloc(idx_t n, const float* x, float* xt) const {
 
     float one = 1;
     FINTEGER nbiti = d_out, ni = static_cast<FINTEGER>(n), di = d_in;
+    if (n == 1) {
+        FINTEGER onei = 1;
+        // Avoid GEMM packing overhead for single-vector transforms. GEMV is
+        // mathematically equivalent but may not be bit-exact with GEMM because
+        // BLAS implementations can use different accumulation orders.
+        sgemv_("Transposed",
+               &di,
+               &nbiti,
+               &one,
+               A.data(),
+               &di,
+               x,
+               &onei,
+               &c_factor,
+               xt,
+               &onei);
+        return;
+    }
     sgemm_("Transposed",
            "Not transposed",
            &nbiti,
