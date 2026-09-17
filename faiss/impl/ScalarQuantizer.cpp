@@ -646,17 +646,6 @@ ScalarQuantizer::SQuantizer* ScalarQuantizer::select_quantizer() const {
     // A SIMD level's factory returns nullptr when the dimension is
     // incompatible (e.g. AVX-512 needs d % 16 == 0); the dispatcher then falls
     // back to the next-lower level (AVX-512 -> AVX2 -> scalar).
-    // IndexIVFScalarQuantizer is compiled out of this build, so this
-    // scanner has no caller. The dispatch below is unreachable and kept
-    // only so the file keeps type-checking against upstream's API.
-    (void)mt;
-    (void)quantizer;
-    (void)store_pairs;
-    (void)sel;
-    (void)by_residual;
-    FAISS_THROW_MSG(
-            "ScalarQuantizer::select_InvertedListScanner: "
-            "IndexIVFScalarQuantizer disabled");
     return with_simd_level_fallback<AVAILABLE_SIMD_LEVELS_BASE_WITH_SPR>(
             [&]<SIMDLevel SL>() -> SQuantizer* {
                 return scalar_quantizer::sq_select_quantizer<SL>(
@@ -701,12 +690,28 @@ ScalarQuantizer::SQDistanceComputer* ScalarQuantizer::get_distance_computer(
             });
 }
 
+// IndexIVFScalarQuantizer is compiled out of this build, and so is this
+// scanner's declaration in the header. Kept behind #if 0 so the code is
+// still here to re-enable, matching how the rest of the index layer is
+// disabled in this fork.
+#if 0
 InvertedListScanner* ScalarQuantizer::select_InvertedListScanner(
         MetricType mt,
         const Index* quantizer,
         bool store_pairs,
         const IDSelector* sel,
         bool by_residual) const {
+    // IndexIVFScalarQuantizer is compiled out of this build, so this scanner
+    // has no caller. The dispatch below is unreachable and kept only so the
+    // file keeps type-checking against upstream's API.
+    (void)mt;
+    (void)quantizer;
+    (void)store_pairs;
+    (void)sel;
+    (void)by_residual;
+    FAISS_THROW_MSG(
+            "ScalarQuantizer::select_InvertedListScanner: "
+            "IndexIVFScalarQuantizer disabled");
     return with_simd_level_fallback<AVAILABLE_SIMD_LEVELS_BASE_WITH_SPR>(
             [&]<SIMDLevel SL>() -> InvertedListScanner* {
                 return scalar_quantizer::sq_select_InvertedListScanner<SL>(
@@ -721,5 +726,6 @@ InvertedListScanner* ScalarQuantizer::select_InvertedListScanner(
                         by_residual);
             });
 }
+#endif
 
 } // namespace faiss
