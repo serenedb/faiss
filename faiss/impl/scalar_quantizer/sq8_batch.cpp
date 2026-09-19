@@ -7,6 +7,9 @@
 
 #include <faiss/impl/scalar_quantizer/sq8_batch.h>
 
+#include <algorithm>
+#include <cmath>
+
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/simd_dispatch.h>
 
@@ -17,6 +20,7 @@ void sq8_batch_train(
         const ScalarQuantizer& sq,
         const float* query,
         bool l2,
+        bool integer,
         SQ8BatchWeights& w) {
     const bool uniform = sq.qtype == ScalarQuantizer::QT_8bit_uniform;
     FAISS_THROW_IF_NOT_MSG(
@@ -60,6 +64,34 @@ void sq8_batch_train(
         }
     }
     w.bias = float(bias);
+
+    w.uq.clear();
+    if (integer && !l2 && sq.d > 0) {
+        const float* src = uniform ? query : w.a.data();
+        const float s0 = uniform ? vdiff[0] / 255.f : 1.f;
+        float qmin = src[0];
+        float qmax = src[0];
+        for (size_t i = 1; i < sq.d; i++) {
+            qmin = std::min(qmin, src[i]);
+            qmax = std::max(qmax, src[i]);
+        }
+        const float qdiff = qmax - qmin;
+        // A constant query has nothing to quantize; leave the integer path off
+        // rather than divide by zero.
+        if (qdiff > 0) {
+            const float mid = 0.5f * (qmin + qmax);
+            const float t = qdiff / 254.f;
+            const float inv = 1.f / t;
+            w.uq.resize(sq.d);
+            for (size_t i = 0; i < sq.d; i++) {
+                const float u = std::nearbyint((src[i] - mid) * inv);
+                w.uq[i] = int8_t(std::clamp(u, -127.f, 127.f));
+            }
+            w.int_dot_scale = s0 * t;
+            w.int_sum_scale = s0 * mid;
+            w.int_bias = w.bias;
+        }
+    }
 }
 
 template <>

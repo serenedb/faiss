@@ -839,12 +839,48 @@ void sq8_batch_score4(
  * QT_8bit batched scoring, AVX512 specialization
  **********************************************************/
 
+__attribute__((target("avx512f,avx512bw,avx512vnni"))) static void
+sq8_int_ip_score4_vnni(
+        const SQ8BatchWeights& w,
+        const uint8_t* const codes[4],
+        float out[4],
+        size_t d) {
+    const int8_t* uq = w.uq.data();
+    const __m512i zero = _mm512_setzero_si512();
+    for (int k = 0; k < 4; k++) {
+        __m512i dot = _mm512_setzero_si512();
+        __m512i sc = _mm512_setzero_si512();
+        size_t i = 0;
+        for (; i + 64 <= d; i += 64) {
+            const __m512i cv =
+                    _mm512_loadu_si512((const void*)(codes[k] + i));
+            const __m512i qv = _mm512_loadu_si512((const void*)(uq + i));
+            dot = _mm512_dpbusd_epi32(dot, cv, qv);
+            sc = _mm512_add_epi64(sc, _mm512_sad_epu8(cv, zero));
+        }
+        int64_t idot = _mm512_reduce_add_epi32(dot);
+        int64_t isum = _mm512_reduce_add_epi64(sc);
+        for (; i < d; i++) {
+            idot += int64_t(codes[k][i]) * int64_t(uq[i]);
+            isum += int64_t(codes[k][i]);
+        }
+        out[k] = float(idot) * w.int_dot_scale +
+                float(isum) * w.int_sum_scale + w.int_bias;
+    }
+}
+
 template <>
 void sq8_batch_score4<SIMDLevel::AVX512>(
         const SQ8BatchWeights& w,
         const uint8_t* const codes[4],
         float out[4],
         size_t d) {
+    // Only when the whole code is scored: a prefix pass reads part of a code,
+    // and sum(c_d) over a prefix does not reconstruct the same inner product.
+    if (w.int_ip() && d == w.d && __builtin_cpu_supports("avx512vnni")) {
+        sq8_int_ip_score4_vnni(w, codes, out, d);
+        return;
+    }
     __m512 acc[4], acc2[4];
     __m512i isq[4];
     for (int k = 0; k < 4; k++) {

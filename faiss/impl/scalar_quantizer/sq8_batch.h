@@ -63,6 +63,15 @@ struct SQ8BatchWeights {
     /// True when the coefficients encode squared L2 rather than inner product.
     bool l2 = false;
 
+    std::vector<int8_t> uq;
+    float int_dot_scale = 0;
+    float int_sum_scale = 0;
+    float int_bias = 0;
+
+    bool int_ip() const {
+        return !l2 && !uq.empty();
+    }
+
     /// True when the L2 squared term is the single constant uniform_sq rather
     /// than the per-dimension vector b, which is then empty. The distinction
     /// cannot be read off uniform_sq's value: a corpus whose vectors are all
@@ -87,6 +96,7 @@ void sq8_batch_train(
         const ScalarQuantizer& sq,
         const float* query,
         bool l2,
+        bool integer,
         SQ8BatchWeights& w);
 
 /** Score four codes against the coefficients.
