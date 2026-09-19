@@ -130,10 +130,18 @@ void sq8_batch_score_n(
         d = w.d;
     }
     constexpr size_t lookahead = 8;
+    // Touch the head of the code and let the hardware stream prefetcher carry
+    // the rest: a code is read front to back, so one miss is all the prefetcher
+    // needs to lock on. Asking for every line of it instead fills the load
+    // queue with requests that are dropped long before they are used -- at
+    // d=1024 that was sixteen prefetches a candidate, eight candidates deep,
+    // and it cost more than the distance kernel it was feeding.
+    constexpr size_t kPrefetchBytes = 128;
+    const size_t prefetch_bytes = d < kPrefetchBytes ? d : kPrefetchBytes;
     auto prefetch = [&](size_t j) {
         if (j < n) {
             const uint8_t* p = get_code(j);
-            for (size_t off = 0; off < d; off += 64) {
+            for (size_t off = 0; off < prefetch_bytes; off += 64) {
                 __builtin_prefetch(p + off, 0, 1);
             }
         }
