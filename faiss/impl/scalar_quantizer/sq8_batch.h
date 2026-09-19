@@ -63,6 +63,29 @@ struct SQ8BatchWeights {
     /// True when the coefficients encode squared L2 rather than inner product.
     bool l2 = false;
 
+    /// Inner product against a uniform quantizer, with the query quantized to
+    /// bytes as well, so the dot product runs in integers: 64 dimensions to an
+    /// AVX-512 VNNI instruction against 16 for the float chain the per-
+    /// dimension coefficients need. Empty when the path does not apply -- a
+    /// per-dimension range has no single s to factor out, and L2 keeps its own
+    /// arrangement above.
+    ///
+    /// The reconstruction, with s the code step, t the query step and
+    /// D = sum u_d c_d, Sc = sum c_d, Sq = sum qhat_d:
+    ///
+    ///   ip = vmin*Sq + 0.5*s*Sq + s*(qmin*Sc + t*D + 0.5*t*Sc)
+    ///
+    /// which is `int_dot * int_dot_scale + Sc * int_sum_scale + int_bias`.
+    std::vector<uint8_t> uq;
+    float int_dot_scale = 0;
+    float int_sum_scale = 0;
+    float int_bias = 0;
+
+    /// True when `uq` holds a quantized query and the integer kernel applies.
+    bool uniform_ip() const {
+        return !l2 && !uq.empty();
+    }
+
     /// True when the L2 squared term is the single constant uniform_sq rather
     /// than the per-dimension vector b, which is then empty. The distinction
     /// cannot be read off uniform_sq's value: a corpus whose vectors are all
