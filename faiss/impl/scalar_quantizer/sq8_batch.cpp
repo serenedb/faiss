@@ -8,6 +8,7 @@
 #include <faiss/impl/scalar_quantizer/sq8_batch.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/simd_dispatch.h>
@@ -79,24 +80,18 @@ void sq8_batch_train(
         const float qdiff = qmax - qmin;
         // A constant query has nothing to quantize; leave the integer path off
         // rather than divide by zero.
-        // 127 levels, not 255: the integer kernel's dot product takes the
-        // query as the signed operand, so it has to fit in int8.
         if (qdiff > 0) {
-            const float t = qdiff / 127.f;
+            const float mid = 0.5f * (qmin + qmax);
+            const float t = qdiff / 254.f;
             w.uq.resize(sq.d);
-            double sq_hat = 0;
             for (size_t i = 0; i < sq.d; i++) {
-                float v = (query[i] - qmin) / t - 0.5f;
-                int u = int(v + 0.5f);
-                u = u < 0 ? 0 : (u > 127 ? 127 : u);
-                w.uq[i] = uint8_t(u);
-                sq_hat += double(qmin) + double(t) * (double(u) + 0.5);
+                const long u = std::lround((query[i] - mid) / t);
+                w.uq[i] = int8_t(std::clamp<long>(u, -127, 127));
             }
             const float s0 = vdiff[0] / 255.f;
             w.int_dot_scale = s0 * t;
-            w.int_sum_scale = s0 * (qmin + 0.5f * t);
-            w.int_bias =
-                    float(sq_hat * (double(vmin[0]) + 0.5 * double(s0)));
+            w.int_sum_scale = s0 * mid;
+            w.int_bias = w.bias;
         }
     }
 }
