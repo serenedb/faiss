@@ -847,16 +847,14 @@ void sq8_batch_score4(
 /// code.
 ///
 /// AVX512 does not imply VNNI (Skylake-X has one and not the other), so this
-/// carries its own target and the caller checks for it. Everything here is a
-/// pure speedup: the float coefficients are still built, and a machine
-/// without VNNI scores exactly as before.
+/// carries its own target and the caller checks for it.
 __attribute__((target("avx512f,avx512bw,avx512vnni"))) static void
 sq8_uniform_ip_score4_vnni(
         const SQ8BatchWeights& w,
         const uint8_t* const codes[4],
         float out[4],
         size_t d) {
-    const uint8_t* uq = w.uq.data();
+    const int8_t* uq = w.uq.data();
     const __m512i zero = _mm512_setzero_si512();
     for (int k = 0; k < 4; k++) {
         __m512i dot = _mm512_setzero_si512();
