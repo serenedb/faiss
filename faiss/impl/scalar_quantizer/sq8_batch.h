@@ -69,14 +69,7 @@ struct SQ8BatchWeights {
     /// dimension coefficients need. Empty when the path does not apply -- a
     /// per-dimension range has no single s to factor out, and L2 keeps its own
     /// arrangement above.
-    ///
-    /// The reconstruction, with s the code step, t the query step and
-    /// D = sum u_d c_d, Sc = sum c_d, Sq = sum qhat_d:
-    ///
-    ///   ip = vmin*Sq + 0.5*s*Sq + s*(qmin*Sc + t*D + 0.5*t*Sc)
-    ///
-    /// which is `int_dot * int_dot_scale + Sc * int_sum_scale + int_bias`.
-    std::vector<uint8_t> uq;
+    std::vector<int8_t> uq;
     float int_dot_scale = 0;
     float int_sum_scale = 0;
     float int_bias = 0;
