@@ -847,6 +847,13 @@ InvertedListScanner* sq_select_InvertedListScanner<SIMDLevel::ARM_SVE>(
             by_residual);
 }
 
+} // namespace scalar_quantizer
+} // namespace faiss
+
+#endif // COMPILE_SIMD_ARM_SVE
+
+namespace faiss {
+namespace scalar_quantizer {
 
 template <SIMDLevel SL0>
 void sq8_batch_score4(
@@ -923,7 +930,5 @@ void sq8_batch_score4<SIMDLevel::ARM_NEON>(
 
 } // namespace scalar_quantizer
 } // namespace faiss
-
-#endif // COMPILE_SIMD_ARM_SVE
 
 #endif // COMPILE_SIMD_ARM_NEON
