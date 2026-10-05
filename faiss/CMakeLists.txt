@@ -562,9 +562,6 @@ if(FAISS_OPT_LEVEL STREQUAL "dd")
       COMPILE_SIMD_AVX2 COMPILE_SIMD_AVX512 COMPILE_SIMD_AVX512_VPOPCNT
       COMPILE_SIMD_AVX512_SPR)
     if(NOT WIN32)
-      # Baseline flags for common files (prevents auto-vectorization)
-      target_compile_options(faiss PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:-mpopcnt -msse4 -mno-avx -mno-avx2>)
       # Per-file SIMD flags (GCC/Clang)
       set_source_files_properties(${FAISS_SIMD_AVX2_SRC}
         TARGET_DIRECTORY faiss
