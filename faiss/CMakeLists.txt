@@ -30,7 +30,7 @@ set(FAISS_SIMD_AVX2_SRC
   utils/simd_impl/super_kmeans_kernels_avx2.cpp
 )
 set(FAISS_SIMD_AVX512_SRC
-  # impl/fast_scan/impl-avx512.cpp
+  impl/fast_scan/impl-avx512.cpp
   impl/hnsw/avx512.cpp
   impl/pq_code_distance/avx512.cpp
   impl/result_handler/avx512.cpp
@@ -72,7 +72,7 @@ set(FAISS_SIMD_SVE_SRC
   utils/simd_impl/super_kmeans_kernels_sve.cpp
 )
 set(FAISS_SIMD_RVV_SRC
-  # impl/fast_scan/impl-riscv.cpp
+  impl/fast_scan/impl-riscv.cpp
   impl/pq_code_distance/rvv.cpp
   impl/scalar_quantizer/sq-rvv.cpp
   impl/binary_hamming/rvv.cpp
