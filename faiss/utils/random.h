@@ -74,6 +74,7 @@ void float_rand(float* x, size_t n, int64_t seed);
 void float_randn(float* x, size_t n, int64_t seed);
 void int64_rand(int64_t* x, size_t n, int64_t seed);
 void byte_rand(uint8_t* x, size_t n, int64_t seed);
+void rand_signs(float* x, size_t n, int64_t seed);
 // max is actually the maximum value + 1
 void int64_rand_max(int64_t* x, size_t n, uint64_t max, int64_t seed);
 
