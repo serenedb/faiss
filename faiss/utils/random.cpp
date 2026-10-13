@@ -32,10 +32,10 @@ namespace faiss {
  * Random data generation functions
  **************************************************/
 
-RandomGenerator::RandomGenerator(int64_t seed) : mt((unsigned int)seed) {}
+RandomGenerator::RandomGenerator(int64_t seed) : pcg((uint64_t)seed) {}
 
 int RandomGenerator::rand_int() {
-    return mt() & 0x7fffffff;
+    return pcg() & 0x7fffffff;
 }
 
 int64_t RandomGenerator::rand_int64() {
@@ -43,15 +43,15 @@ int64_t RandomGenerator::rand_int64() {
 }
 
 int RandomGenerator::rand_int(int max) {
-    return mt() % max;
+    return pcg() % max;
 }
 
 float RandomGenerator::rand_float() {
-    return mt() / float(mt.max());
+    return pcg() / float(pcg.max());
 }
 
 double RandomGenerator::rand_double() {
-    return mt() / double(mt.max());
+    return pcg() / double(pcg.max());
 }
 
 SplitMix64RandomGenerator::SplitMix64RandomGenerator(int64_t seed)
