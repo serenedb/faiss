@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <random>
 
+#include <pcg_random.hpp>
+
 namespace faiss {
 
 /**************************************************
@@ -24,7 +26,7 @@ namespace faiss {
 
 /// random generator that can be used in multithreaded contexts
 struct RandomGenerator {
-    std::mt19937 mt;
+    pcg32 pcg;
 
     /// random positive integer
     int rand_int();
