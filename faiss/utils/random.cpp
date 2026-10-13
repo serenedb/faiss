@@ -211,6 +211,16 @@ void rand_perm_splitmix64(int* perm, size_t n, int64_t seed) {
     }
 }
 
+void rand_signs(float* x, size_t n, int64_t seed) {
+    pcg32 rng((uint64_t)seed);
+    for (size_t i = 0; i < n;) {
+        const uint32_t bits = rng();
+        for (size_t b = 0; b < 32 && i < n; b++, i++) {
+            x[i] = ((bits >> b) & 1) != 0 ? -1.0f : 1.0f;
+        }
+    }
+}
+
 void byte_rand(uint8_t* x, size_t n, int64_t seed) {
     // only try to parallelize on large enough arrays
     const size_t nblock = n < 1024 ? 1 : 1024;

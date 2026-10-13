@@ -455,10 +455,7 @@ struct QuantizerTurboQuantFull<NBits, SIMDLevel::NONE>
                 padded_d <<= 1;
             }
             fwht_signs.resize(padded_d);
-            RandomGenerator rng(seed);
-            for (size_t i = 0; i < padded_d; i++) {
-                fwht_signs[i] = (rng.rand_int(2) == 0) ? 1.0f : -1.0f;
-            }
+            rand_signs(fwht_signs.data(), padded_d, seed);
         } else {
             // Random Rotation mode
             padded_d = d; // no padding needed for dense multiply
