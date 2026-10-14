@@ -96,6 +96,7 @@ void sq8_batch_train(
         const ScalarQuantizer& sq,
         const float* query,
         bool l2,
+        bool integer,
         SQ8BatchWeights& w);
 
 /** Score four codes against the coefficients.
