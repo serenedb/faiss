@@ -839,18 +839,8 @@ void sq8_batch_score4(
  * QT_8bit batched scoring, AVX512 specialization
  **********************************************************/
 
-/// Inner product against a uniform quantizer with the query quantized to
-/// bytes: the dot product runs in integers, sixty-four dimensions to an
-/// instruction against the sixteen a float chain manages. VNNI accumulates
-/// into int32, so nothing saturates the way a 16-bit multiply-add would at
-/// these magnitudes; `sad` collects sum(c_d) in the same pass, which the
-/// reconstruction needs and which would otherwise cost a second read of the
-/// code.
-///
-/// AVX512 does not imply VNNI (Skylake-X has one and not the other), so this
-/// carries its own target and the caller checks for it.
 __attribute__((target("avx512f,avx512bw,avx512vnni"))) static void
-sq8_uniform_ip_score4_vnni(
+sq8_int_ip_score4_vnni(
         const SQ8BatchWeights& w,
         const uint8_t* const codes[4],
         float out[4],
@@ -887,8 +877,8 @@ void sq8_batch_score4<SIMDLevel::AVX512>(
         size_t d) {
     // Only when the whole code is scored: a prefix pass reads part of a code,
     // and sum(c_d) over a prefix does not reconstruct the same inner product.
-    if (w.uniform_ip() && d == w.d && __builtin_cpu_supports("avx512vnni")) {
-        sq8_uniform_ip_score4_vnni(w, codes, out, d);
+    if (w.int_ip() && d == w.d && __builtin_cpu_supports("avx512vnni")) {
+        sq8_int_ip_score4_vnni(w, codes, out, d);
         return;
     }
     __m512 acc[4], acc2[4];
