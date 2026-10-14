@@ -64,18 +64,15 @@ void sq8_batch_train(
     }
     w.bias = float(bias);
 
-    // A uniform range leaves one step `s` for every dimension, so the code's
-    // contribution factors out of the sum and the dot product can be taken in
-    // integers -- but only if the query is bytes too. Quantize it over its own
-    // range and keep the float path's coefficients as well, so a caller that
-    // cannot use the integer kernel is unaffected.
     w.uq.clear();
-    if (!l2 && uniform && sq.d > 0) {
-        float qmin = query[0];
-        float qmax = query[0];
+    if (!l2 && sq.d > 0) {
+        const float* src = uniform ? query : w.a.data();
+        const float s0 = uniform ? vdiff[0] / 255.f : 1.f;
+        float qmin = src[0];
+        float qmax = src[0];
         for (size_t i = 1; i < sq.d; i++) {
-            qmin = std::min(qmin, query[i]);
-            qmax = std::max(qmax, query[i]);
+            qmin = std::min(qmin, src[i]);
+            qmax = std::max(qmax, src[i]);
         }
         const float qdiff = qmax - qmin;
         // A constant query has nothing to quantize; leave the integer path off
@@ -85,10 +82,9 @@ void sq8_batch_train(
             const float t = qdiff / 254.f;
             w.uq.resize(sq.d);
             for (size_t i = 0; i < sq.d; i++) {
-                const long u = std::lround((query[i] - mid) / t);
+                const long u = std::lround((src[i] - mid) / t);
                 w.uq[i] = int8_t(std::clamp<long>(u, -127, 127));
             }
-            const float s0 = vdiff[0] / 255.f;
             w.int_dot_scale = s0 * t;
             w.int_sum_scale = s0 * mid;
             w.int_bias = w.bias;
