@@ -401,7 +401,7 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
     }
 
     IFV printf(
-            "partition fuzzy, q=%ld:%ld / %ld, bounds=%d %d\n",
+            "partition fuzzy, q=%zu:%zu / %zu, bounds=%d %d\n",
             q_min,
             q_max,
             n,
@@ -410,7 +410,7 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
 
     if (!C::is_max) {
         IFV printf(
-                "revert due to CMin, q_min:q_max -> %ld:%ld\n", q_min, q_max);
+                "revert due to CMin, q_min:q_max -> %zu:%zu\n", q_min, q_max);
         q_min = n - q_min;
         q_max = n - q_max;
     }
@@ -435,7 +435,7 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
         int shift = 0;
 
         IFV printf(
-                "  it %d bounds: %d %d n_lt=%ld n_gt=%ld\n",
+                "  it %d bounds: %d %d n_lt=%zu n_gt=%zu\n",
                 it,
                 s0,
                 s1,
@@ -462,12 +462,12 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
         }
         IFV {
             int sum = n_lt + n_gt;
-            printf("    n_lt=%ld hist=[", n_lt);
+            printf("    n_lt=%zu hist=[", n_lt);
             for (int i = 0; i <= maxval; i++) {
                 printf("%d ", hist[i]);
                 sum += hist[i];
             }
-            printf("] n_gt=%ld sum=%d\n", n_gt, sum);
+            printf("] n_gt=%zu sum=%d\n", n_gt, sum);
             assert(sum == n);
         }
 
@@ -479,7 +479,7 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
                 break;
             }
         }
-        IFV printf("    i=%d sum_below=%ld\n", i, sum_below);
+        IFV printf("    i=%d sum_below=%zu\n", i, sum_below);
         if (i <= maxval) {
             s0 = s0 + (i << shift);
             s1 = s0 + (1 << shift) - 1;
@@ -490,7 +490,7 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
         }
 
         IFV printf(
-                "    new bin: s0=%d s1=%d n_lt=%ld n_gt=%ld\n",
+                "    new bin: s0=%d s1=%d n_lt=%zu n_gt=%zu\n",
                 s0,
                 s1,
                 n_lt,
@@ -521,7 +521,11 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
         }
     }
 
-    IFV printf("end bisection: thresh=%d q=%ld n_eq=%ld\n", thresh, q, n_eq);
+    IFV printf(
+            "end bisection: thresh=%d q=%zu n_eq=%" PRIu64 "\n",
+            thresh,
+            q,
+            n_eq);
 
     if (!C::is_max) {
         if (n_eq == 0) {
@@ -531,11 +535,11 @@ uint16_t simd_partition_fuzzy_with_bounds_histogram(
             n_eq = tot_eq - n_eq;
         }
         q = n - q;
-        IFV printf("revert due to CMin, q->%ld n_eq->%ld\n", q, n_eq);
+        IFV printf("revert due to CMin, q->%zu n_eq->%" PRIu64 "\n", q, n_eq);
     }
 
     size_t wp = simd_compress_array<C>(vals, ids, n, thresh, n_eq);
-    IFV printf("wp=%ld ?= %ld\n", wp, q);
+    IFV printf("wp=%zu ?= %zu\n", wp, q);
     assert(wp == q);
     if (q_out) {
         *q_out = wp;
