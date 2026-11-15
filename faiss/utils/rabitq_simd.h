@@ -271,7 +271,7 @@ inline void rearrange_bit_planes<SIMDLevel::NONE>(
 }
 
 inline uint8_t round_clamped_byte_scalar(float x, uint8_t max_code) {
-    if (x <= 0.0f) {
+    if (!(x > 0.0f)) {
         return 0;
     }
     if (x >= max_code) {

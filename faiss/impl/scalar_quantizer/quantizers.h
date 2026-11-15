@@ -78,7 +78,7 @@ struct QuantizerTemplate<
             float xi = 0;
             if (vdiff != 0) {
                 xi = (x[i] - vmin) / vdiff;
-                if (xi < 0) {
+                if (!(xi >= 0)) {
                     xi = 0;
                 }
                 if (xi > 1.0) {
@@ -120,7 +120,7 @@ struct QuantizerTemplate<
             float xi = 0;
             if (vdiff[i] != 0) {
                 xi = (x[i] - vmin[i]) / vdiff[i];
-                if (xi < 0) {
+                if (!(xi >= 0)) {
                     xi = 0;
                 }
                 if (xi > 1.0) {

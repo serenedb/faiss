@@ -54,7 +54,7 @@ void round_tab(float* tab, size_t n, float a, float bi) {
 template <typename T>
 void round_tab(const float* tab, size_t n, float a, float bi, T* tab_out) {
     for (size_t i = 0; i < n; i++) {
-        tab_out[i] = (T)floorf((tab[i] - bi) * a + 0.5);
+        tab_out[i] = (T)lrintf(floorf((tab[i] - bi) * a + 0.5));
     }
 }
 
